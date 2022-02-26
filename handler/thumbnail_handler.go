@@ -30,7 +30,7 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	pathArr := strings.Split(r.URL.Path, "/")
+	pathArr := strings.Split(r.URL.Path, "thumbnail/")
 	filename := pathArr[len(pathArr)-1]
 	if filename == "" {
 		response.SendBadRequest(w, "filename")

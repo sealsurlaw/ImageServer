@@ -39,6 +39,24 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
+	// check if directories need to be created
+	if strings.Contains(filename, "/") {
+		filenameSplit := strings.Split(filename, "/")
+		path := h.BasePath
+		for _, dir := range filenameSplit[:len(filenameSplit)-1] {
+			path += "/" + dir
+			_, err := os.ReadDir(path)
+			if err == nil {
+				continue
+			}
+			err = os.Mkdir(path, 0700)
+			if err != nil {
+				response.SendError(w, 400, "Error creating directories.", err)
+				return
+			}
+		}
+	}
+
 	// write file
 	fileData, err := ioutil.ReadAll(file)
 	if err != nil {
