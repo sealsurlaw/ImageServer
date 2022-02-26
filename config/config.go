@@ -53,6 +53,10 @@ func populateConfigWithDefaults(cfg *Config) {
 		}
 		cfg.BasePath = bp
 	}
+
+	if cfg.WhitelistedTokens == nil {
+		cfg.WhitelistedTokens = []string{}
+	}
 }
 
 func basePathDoesNotExists(basePath string) bool {

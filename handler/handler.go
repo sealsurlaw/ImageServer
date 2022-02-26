@@ -68,6 +68,11 @@ func getLinkStore(cfg *config.Config) linkstore.LinkStore {
 }
 
 func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
+	// If nothing configured, allow all
+	if len(h.WhitelistedTokens) == 0 {
+		return true
+	}
+
 	authentication := r.Header.Get("Authorization")
 	if authentication == "" {
 		return false
