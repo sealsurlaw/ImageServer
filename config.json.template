@@ -3,6 +3,7 @@
     "basePath": "/Users/sealsurlaw/Downloads/imageserver",
     "baseUrl": "http://localhost:8080",
     "cleanupDuration": "12h",
+    "thumbnailQuality": 50,
     "postgresqlConfig": {
         "enabled": true,
         "databaseString": "postgresql://imageserver:abcd1234@localhost:5432/imageserver?sslmode=disable"

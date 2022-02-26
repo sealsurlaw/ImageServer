@@ -70,10 +70,12 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 		err = h.createThumbnail(filename, resolution, cropped)
 		if err != nil {
 			response.SendError(w, 500, "Couldn't create thumbnail.", err)
+			return
 		}
 		file, err = os.Open(fullFileName)
 		if err != nil {
 			response.SendCouldntFindImage(w, err)
+			return
 		}
 	}
 	defer file.Close()
@@ -82,6 +84,7 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	expiresAt, token, err := h.tryToAddLink(fullFileName, expiresDuration)
 	if err != nil {
 		response.SendError(w, 500, err.Error(), err)
+		return
 	}
 
 	url := fmt.Sprintf("%s/link/%d", h.BaseUrl, token)
@@ -102,7 +105,7 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 	defer file.Close()
 
 	// create thumbnail
-	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped)
+	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped, h.ThumbnailQuality)
 	if err != nil {
 		return err
 	}

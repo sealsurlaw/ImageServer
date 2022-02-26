@@ -6,7 +6,9 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/sealsurlaw/ImageServer/errs"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
@@ -43,6 +45,14 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		response.SendError(w, 400, "Couldn't parse file.", err)
 		return
 	}
+
+	contentType := http.DetectContentType(fileData)
+	if !strings.Contains(contentType, "image/") {
+		msg := fmt.Sprintf("Content type %s not supported.", contentType)
+		response.SendError(w, 400, msg, errs.ErrInvalidContentType)
+		return
+	}
+
 	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
 	err = os.WriteFile(fullFileName, fileData, 0600)
 	if err != nil {

@@ -15,17 +15,19 @@ import (
 )
 
 type Handler struct {
+	LinkStore         linkstore.LinkStore
 	BaseUrl           string
 	BasePath          string
-	LinkStore         linkstore.LinkStore
+	ThumbnailQuality  int
 	WhitelistedTokens []string
 }
 
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
+		LinkStore:         getLinkStore(cfg),
 		BaseUrl:           getBaseUrl(cfg),
 		BasePath:          getBasePath(cfg),
-		LinkStore:         getLinkStore(cfg),
+		ThumbnailQuality:  cfg.ThumbnailQuality,
 		WhitelistedTokens: cfg.WhitelistedTokens,
 	}
 }

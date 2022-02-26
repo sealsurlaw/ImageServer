@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -12,6 +13,8 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().Unix())
+
 	cfg := config.NewConfig()
 	h := handler.NewHandler(cfg)
 

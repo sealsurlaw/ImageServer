@@ -12,6 +12,7 @@ type Config struct {
 	Port             string `json:"port"`
 	BaseUrl          string `json:"baseUrl"`
 	BasePath         string `json:"basePath"`
+	ThumbnailQuality int    `json:"thumbnailQuality"`
 	CleanupDuration  string `json:"cleanupDuration"`
 	PostgresqlConfig struct {
 		Enabled        bool   `json:"enabled"`
@@ -57,6 +58,10 @@ func populateConfigWithDefaults(cfg *Config) {
 	}
 
 	fmt.Printf("Writing images to %s\n", cfg.BasePath)
+
+	if cfg.ThumbnailQuality == 0 {
+		cfg.ThumbnailQuality = 50
+	}
 
 	duration, err := time.ParseDuration(cfg.CleanupDuration)
 	if err != nil {

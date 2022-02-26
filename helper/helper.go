@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
-	"image/png"
 	"io"
-	"io/ioutil"
 	"math"
-	"net/http"
 	"os"
 	"time"
 
@@ -36,26 +33,10 @@ func CleanExpiredTokens(ls linkstore.LinkStore, duration time.Duration) {
 	}
 }
 
-func CreateThumbnail(file *os.File, resolution int, cropped bool) (io.Reader, error) {
-	fileData, err := ioutil.ReadAll(file)
+func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (io.Reader, error) {
+	img, _, err := image.Decode(file)
 	if err != nil {
-		return nil, err
-	}
-	contentType := http.DetectContentType(fileData)
-
-	r := bytes.NewReader(fileData)
-
-	var img image.Image
-	switch contentType {
-	case "image/jpeg":
-		img, err = jpeg.Decode(r)
-	case "image/png":
-		img, err = png.Decode(r)
-	default:
-		err = errs.ErrInvalidContentType
-	}
-	if err != nil {
-		return nil, err
+		return nil, errs.ErrInvalidContentType
 	}
 
 	var thumbImgScaled *image.RGBA
@@ -97,7 +78,9 @@ func CreateThumbnail(file *os.File, resolution int, cropped bool) (io.Reader, er
 	}
 
 	buf := new(bytes.Buffer)
-	err = png.Encode(buf, thumbImgScaled)
+	err = jpeg.Encode(buf, thumbImgScaled, &jpeg.Options{
+		Quality: quality,
+	})
 	if err != nil {
 		return nil, err
 	}
