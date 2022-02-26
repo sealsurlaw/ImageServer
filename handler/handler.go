@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 
 	"github.com/sealsurlaw/ImageServer/config"
@@ -10,17 +11,31 @@ import (
 )
 
 type Handler struct {
-	BaseUrl   string
-	BasePath  string
-	LinkStore linkstore.LinkStore
+	BaseUrl               string
+	BasePath              string
+	LinkStore             linkstore.LinkStore
+	AuthorizedIpAddresses []net.IP
 }
 
 func NewHandler(cfg *config.Config) *Handler {
+	return &Handler{
+		BaseUrl:               getBaseUrl(cfg),
+		BasePath:              getBasePath(cfg),
+		LinkStore:             getLinkStore(cfg),
+		AuthorizedIpAddresses: getAuthorizedIpAddresses(cfg),
+	}
+}
+
+func getBaseUrl(cfg *config.Config) string {
 	baseUrl := cfg.BaseUrl
 	if baseUrl == "" {
 		baseUrl = fmt.Sprintf("http://localhost:%s", cfg.Port)
 	}
 
+	return baseUrl
+}
+
+func getBasePath(cfg *config.Config) string {
 	basePath := cfg.BasePath
 	if basePath == "" {
 		bp, err := os.MkdirTemp("/tmp", "imageserver.*")
@@ -30,6 +45,10 @@ func NewHandler(cfg *config.Config) *Handler {
 		basePath = bp
 	}
 
+	return basePath
+}
+
+func getLinkStore(cfg *config.Config) linkstore.LinkStore {
 	var linkStore linkstore.LinkStore
 	linkStore = linkstore.NewMemoryLinkStore()
 	if cfg.PostgresqlConfig.Enabled {
@@ -44,9 +63,18 @@ func NewHandler(cfg *config.Config) *Handler {
 		fmt.Println("Connected to Memory link store.")
 	}
 
-	return &Handler{
-		BaseUrl:   baseUrl,
-		BasePath:  basePath,
-		LinkStore: linkStore,
+	return linkStore
+}
+
+func getAuthorizedIpAddresses(cfg *config.Config) []net.IP {
+	authIps := []net.IP{}
+	if !cfg.DirectDownload.Enabled {
+		return authIps
 	}
+
+	for _, ipAddress := range cfg.DirectDownload.AuthorizedIpAddresses {
+		authIps = append(authIps, net.ParseIP(ipAddress))
+	}
+
+	return authIps
 }

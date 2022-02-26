@@ -11,6 +11,8 @@ var ErrTokenAlreadyExists = fmt.Errorf("Token already exists.")
 
 var ErrTokenNotFound = fmt.Errorf("Token not found.")
 
+var ErrNotAuthorized = fmt.Errorf("Not authorized.")
+
 var ErrTokenExpired = fmt.Errorf("Token expired.")
 
 type ErrorResponse struct {

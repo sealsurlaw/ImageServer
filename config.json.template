@@ -2,6 +2,12 @@
     "port": "8080",
     "basePath": "/MyVolume/example/ImageServer",
     "baseUrl": "http://localhost:8080",
+    "directDownload": {
+        "enabled": true,
+        "authorizedIpAddresses": [
+            "127.0.0.1"
+        ]
+    },
     "postgresqlConfig": {
         "enabled": true,
         "databaseString": "postgresql://imageserver:abcd1234@localhost:5432/imageserver?sslmode=disable"

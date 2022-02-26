@@ -18,6 +18,13 @@ func (h *Handler) Download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.isAuthorized(r) {
+		msg := "Not on the authorized IP Address list."
+		res := errs.NewErrorResponse(http.StatusNotFound, msg, errs.ErrNotAuthorized)
+		helper.SendJson(w, res)
+		return
+	}
+
 	pathArr := strings.Split(r.URL.Path, "/")
 	filename := pathArr[len(pathArr)-1]
 
@@ -32,4 +39,17 @@ func (h *Handler) Download(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	helper.SendImage(w, file)
+}
+
+func (h *Handler) isAuthorized(r *http.Request) bool {
+	ip := helper.GetIP(r)
+	auth := false
+	for _, ipAddress := range h.AuthorizedIpAddresses {
+		if ipAddress.Equal(ip) {
+			auth = true
+			break
+		}
+	}
+
+	return auth
 }
