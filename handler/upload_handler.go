@@ -20,6 +20,13 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.hasWhitelistedToken(r) {
+		msg := "Invalid auth token."
+		res := errs.NewErrorResponse(http.StatusNotFound, msg, errs.ErrNotAuthorized)
+		helper.SendJson(w, res)
+		return
+	}
+
 	filename := r.FormValue("filename")
 
 	r.ParseMultipartForm(math.MaxInt64)

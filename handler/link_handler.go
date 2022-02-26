@@ -31,6 +31,13 @@ func (h *Handler) Link(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
+	if !h.hasWhitelistedToken(r) {
+		msg := "Invalid auth token."
+		res := errs.NewErrorResponse(http.StatusNotFound, msg, errs.ErrNotAuthorized)
+		helper.SendJson(w, res)
+		return
+	}
+
 	pathArr := strings.Split(r.URL.Path, "/")
 	filename := pathArr[len(pathArr)-1]
 

@@ -8,17 +8,14 @@ import (
 )
 
 type Config struct {
-	Port           string `json:"port"`
-	BaseUrl        string `json:"baseUrl"`
-	BasePath       string `json:"basePath"`
-	DirectDownload struct {
-		Enabled               bool     `json:"enabled"`
-		AuthorizedIpAddresses []string `json:"authorizedIpAddresses"`
-	}
+	Port             string `json:"port"`
+	BaseUrl          string `json:"baseUrl"`
+	BasePath         string `json:"basePath"`
 	PostgresqlConfig struct {
 		Enabled        bool   `json:"enabled"`
 		DatabaseString string `json:"databaseString"`
 	} `json:"postgresqlConfig"`
+	WhitelistedTokens []string `json:"whitelistedTokens"`
 }
 
 func NewConfig() *Config {

@@ -3,26 +3,27 @@ package handler
 import (
 	"fmt"
 	"log"
-	"net"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/sealsurlaw/ImageServer/config"
 	"github.com/sealsurlaw/ImageServer/linkstore"
 )
 
 type Handler struct {
-	BaseUrl               string
-	BasePath              string
-	LinkStore             linkstore.LinkStore
-	AuthorizedIpAddresses []net.IP
+	BaseUrl           string
+	BasePath          string
+	LinkStore         linkstore.LinkStore
+	WhitelistedTokens []string
 }
 
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
-		BaseUrl:               getBaseUrl(cfg),
-		BasePath:              getBasePath(cfg),
-		LinkStore:             getLinkStore(cfg),
-		AuthorizedIpAddresses: getAuthorizedIpAddresses(cfg),
+		BaseUrl:           getBaseUrl(cfg),
+		BasePath:          getBasePath(cfg),
+		LinkStore:         getLinkStore(cfg),
+		WhitelistedTokens: cfg.WhitelistedTokens,
 	}
 }
 
@@ -66,15 +67,27 @@ func getLinkStore(cfg *config.Config) linkstore.LinkStore {
 	return linkStore
 }
 
-func getAuthorizedIpAddresses(cfg *config.Config) []net.IP {
-	authIps := []net.IP{}
-	if !cfg.DirectDownload.Enabled {
-		return authIps
+func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
+	authentication := r.Header.Get("Authorization")
+	if authentication == "" {
+		return false
 	}
 
-	for _, ipAddress := range cfg.DirectDownload.AuthorizedIpAddresses {
-		authIps = append(authIps, net.ParseIP(ipAddress))
+	authSplit := strings.Split(authentication, " ")
+	if len(authSplit) != 2 {
+		return false
+	}
+	if authSplit[0] != "Bearer" {
+		return false
 	}
 
-	return authIps
+	auth := false
+	for _, token := range h.WhitelistedTokens {
+		if token == authSplit[1] {
+			auth = true
+			break
+		}
+	}
+
+	return auth
 }

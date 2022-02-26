@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -30,13 +29,4 @@ func SendImage(w http.ResponseWriter, file *os.File) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(fileData)))
 	w.Write(fileData)
-}
-
-func GetIP(r *http.Request) net.IP {
-	forwarded := r.Header.Get("X-FORWARDED-FOR")
-	if forwarded != "" {
-		return net.ParseIP(forwarded)
-	}
-
-	return net.ParseIP(r.RemoteAddr)
 }
