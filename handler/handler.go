@@ -112,7 +112,8 @@ func (h *Handler) tryToAddLink(
 	for true {
 		tries++
 
-		expiresAt = time.Now().Add(expiresDuration)
+		expiresAt = time.Now().Add(expiresDuration).UTC()
+
 		token = rand.Int63()
 		err := h.LinkStore.AddLink(token, &linkstore.Link{
 			FullFilename: fullFileName,

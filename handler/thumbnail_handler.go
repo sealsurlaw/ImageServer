@@ -15,9 +15,6 @@ import (
 
 func (h *Handler) Thumbnail(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		h.createThumbnail(w, r)
-		return
-	} else if r.Method == "GET" {
 		h.getThumbnailLink(w, r)
 		return
 	} else {
@@ -26,7 +23,7 @@ func (h *Handler) Thumbnail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) createThumbnail(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	if !h.hasWhitelistedToken(r) {
 		response.SendInvalidAuthToken(w)
 		return
@@ -48,71 +45,36 @@ func (h *Handler) createThumbnail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// open file
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
-	file, err := os.Open(fullFileName)
-	if err != nil {
-		response.SendCouldntFindImage(w, err)
-		return
-	}
-	defer file.Close()
-
-	// create thumbnail
-	thumbFile, err := helper.CreateThumbnail(file, resolution)
-	if err != nil {
-		response.SendError(w, 500, "Couldn't create thumbnail.", err)
-		return
-	}
-
-	// write file
-	fileData, err := ioutil.ReadAll(thumbFile)
-	if err != nil {
-		response.SendError(w, 400, "Couldn't parse file.", err)
-		return
-	}
-	fullFileName = fmt.Sprintf("%s/%s_%d", h.BasePath, filename, resolution)
-	err = os.WriteFile(fullFileName, fileData, 0600)
-	if err != nil {
-		response.SendError(w, 500, "Couldn't write file.", err)
-		return
-	}
-}
-
-func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
-	if !h.hasWhitelistedToken(r) {
-		response.SendInvalidAuthToken(w)
-		return
-	}
-
-	// filename
-	pathArr := strings.Split(r.URL.Path, "/")
-	filename := pathArr[len(pathArr)-1]
-	if filename == "" {
-		response.SendBadRequest(w, "filename")
-		return
-	}
-
-	// resolution
-	resolution := r.FormValue("resolution")
-	if resolution == "" {
-		response.SendBadRequest(w, "resolution")
-		return
-	}
-
 	// expires - optional
 	expiresIn := r.URL.Query().Get("expires")
-	var expiresDuration time.Duration
 	expiresDuration, err := time.ParseDuration(expiresIn)
 	if err != nil {
 		expiresDuration = 24 * time.Hour
 	}
 
+	// cropped - optional
+	croppedStr := r.URL.Query().Get("cropped")
+	cropped, err := strconv.ParseBool(croppedStr)
+	if croppedStr == "" || err != nil {
+		cropped = false
+	}
+
 	// open file to make sure it exists
-	fullFileName := fmt.Sprintf("%s/%s_%s", h.BasePath, filename, resolution)
+	fullFileName := fmt.Sprintf("%s/%s_%d", h.BasePath, filename, resolution)
+	if cropped {
+		fullFileName += "_cropped"
+	}
 	file, err := os.Open(fullFileName)
 	if err != nil {
-		response.SendCouldntFindImage(w, err)
-		return
+		// if not found, attempt to make it
+		err = h.createThumbnail(filename, resolution, cropped)
+		if err != nil {
+			response.SendError(w, 500, "Couldn't create thumbnail.", err)
+		}
+		file, err = os.Open(fullFileName)
+		if err != nil {
+			response.SendCouldntFindImage(w, err)
+		}
 	}
 	defer file.Close()
 
@@ -128,4 +90,36 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 		Url:       url,
 		ExpiresAt: expiresAt,
 	})
+}
+
+func (h *Handler) createThumbnail(filename string, resolution int, cropped bool) error {
+	// open file
+	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
+	file, err := os.Open(fullFileName)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// create thumbnail
+	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped)
+	if err != nil {
+		return err
+	}
+
+	// write file
+	fileData, err := ioutil.ReadAll(thumbFile)
+	if err != nil {
+		return err
+	}
+	fullFileName = fmt.Sprintf("%s/%s_%d", h.BasePath, filename, resolution)
+	if cropped {
+		fullFileName += "_cropped"
+	}
+	err = os.WriteFile(fullFileName, fileData, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
