@@ -2,6 +2,8 @@ package helper
 
 import (
 	"bytes"
+	"crypto/sha512"
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/gif"
@@ -20,7 +22,9 @@ import (
 	"golang.org/x/image/draw"
 )
 
-func CleanExpiredTokens(ls linkstore.LinkStore, duration time.Duration) {
+func CleanExpiredTokens(ls linkstore.LinkStore, durationStr string) {
+	// error handled in NewConfig
+	duration, _ := time.ParseDuration(durationStr)
 	if duration == 0 {
 		fmt.Println("Cleanup turned off.")
 		return
@@ -126,4 +130,9 @@ func IsSupportedContentType(contentType string) bool {
 	}
 
 	return false
+}
+
+func CalculateHash(str string) string {
+	s := sha512.Sum384([]byte(str))
+	return base64.URLEncoding.EncodeToString(s[:])
 }

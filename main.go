@@ -18,11 +18,10 @@ func main() {
 	cfg := config.NewConfig()
 	h := handler.NewHandler(cfg)
 
-	// error handled in NewConfig
-	duration, _ := time.ParseDuration(cfg.CleanupDuration)
-	go helper.CleanExpiredTokens(h.LinkStore, duration)
+	go helper.CleanExpiredTokens(h.LinkStore, cfg.CleanupDuration)
 
 	http.HandleFunc("/ping", h.Ping)
+	http.HandleFunc("/link", h.Link)
 	http.HandleFunc("/link/", h.Link)
 	http.HandleFunc("/upload", h.Upload)
 	http.HandleFunc("/download/", h.Download)

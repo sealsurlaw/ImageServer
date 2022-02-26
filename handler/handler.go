@@ -18,8 +18,9 @@ type Handler struct {
 	LinkStore         linkstore.LinkStore
 	BaseUrl           string
 	BasePath          string
-	ThumbnailQuality  int
-	WhitelistedTokens []string
+	thumbnailQuality  int
+	hashFilename      bool
+	whitelistedTokens []string
 }
 
 func NewHandler(cfg *config.Config) *Handler {
@@ -27,8 +28,9 @@ func NewHandler(cfg *config.Config) *Handler {
 		LinkStore:         getLinkStore(cfg),
 		BaseUrl:           getBaseUrl(cfg),
 		BasePath:          getBasePath(cfg),
-		ThumbnailQuality:  cfg.ThumbnailQuality,
-		WhitelistedTokens: cfg.WhitelistedTokens,
+		thumbnailQuality:  cfg.ThumbnailQuality,
+		hashFilename:      cfg.HashFilename,
+		whitelistedTokens: cfg.WhitelistedTokens,
 	}
 }
 
@@ -74,7 +76,7 @@ func getLinkStore(cfg *config.Config) linkstore.LinkStore {
 
 func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
 	// If nothing configured, allow all
-	if len(h.WhitelistedTokens) == 0 {
+	if len(h.whitelistedTokens) == 0 {
 		return true
 	}
 
@@ -92,7 +94,7 @@ func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
 	}
 
 	auth := false
-	for _, token := range h.WhitelistedTokens {
+	for _, token := range h.whitelistedTokens {
 		if token == authSplit[1] {
 			auth = true
 			break
@@ -115,8 +117,8 @@ func (h *Handler) tryToAddLink(
 		tries++
 
 		expiresAt = time.Now().Add(expiresDuration).UTC()
-
 		token = rand.Int63()
+
 		err := h.LinkStore.AddLink(token, &linkstore.Link{
 			FullFilename: fullFileName,
 			ExpiresAt:    &expiresAt,

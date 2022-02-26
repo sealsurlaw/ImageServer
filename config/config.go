@@ -14,6 +14,7 @@ type Config struct {
 	BasePath         string `json:"basePath"`
 	ThumbnailQuality int    `json:"thumbnailQuality"`
 	CleanupDuration  string `json:"cleanupDuration"`
+	HashFilename     bool   `json:"hashFilename"`
 	PostgresqlConfig struct {
 		Enabled        bool   `json:"enabled"`
 		DatabaseString string `json:"databaseString"`

@@ -28,18 +28,18 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// filename
-	filename := r.FormValue("filename")
-	if filename == "" {
-		response.SendBadRequest(w, "filename")
-		return
-	}
-
 	// resolution
 	resolutionStr := r.FormValue("resolution")
 	resolution, err := strconv.Atoi(resolutionStr)
 	if resolutionStr == "" || err != nil {
 		response.SendBadRequest(w, "resolution")
+		return
+	}
+
+	// filename
+	filename := r.FormValue("filename")
+	if filename == "" {
+		response.SendBadRequest(w, "filename")
 		return
 	}
 
@@ -58,10 +58,8 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// open file to make sure it exists
-	fullFileName := fmt.Sprintf("%s/%s_%d", h.BasePath, filename, resolution)
-	if cropped {
-		fullFileName += "_cropped"
-	}
+	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, thumbnailFilename)
 	file, err := os.Open(fullFileName)
 	if err != nil {
 		// if not found, attempt to make it
@@ -95,6 +93,9 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) createThumbnail(filename string, resolution int, cropped bool) error {
 	// open file
+	if h.hashFilename {
+		filename = helper.CalculateHash(filename)
+	}
 	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
 	file, err := os.Open(fullFileName)
 	if err != nil {
@@ -103,7 +104,7 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 	defer file.Close()
 
 	// create thumbnail
-	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped, h.ThumbnailQuality)
+	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped, h.thumbnailQuality)
 	if err != nil {
 		return err
 	}
@@ -113,14 +114,31 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 	if err != nil {
 		return err
 	}
-	fullFileName = fmt.Sprintf("%s/%s_%d", h.BasePath, filename, resolution)
-	if cropped {
-		fullFileName += "_cropped"
-	}
+
+	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	fullFileName = fmt.Sprintf("%s/%s", h.BasePath, thumbnailFilename)
 	err = os.WriteFile(fullFileName, fileData, 0600)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (h *Handler) getThumbnailFilename(filename string, resolution int, cropped bool) string {
+	var thumbnailFilename string
+	if h.hashFilename {
+		filename += strconv.Itoa(resolution)
+		if cropped {
+			filename += "crop"
+		}
+		thumbnailFilename = helper.CalculateHash(filename)
+	} else {
+		thumbnailFilename = fmt.Sprintf("%s_%d", filename, resolution)
+		if cropped {
+			thumbnailFilename += "_crop"
+		}
+	}
+
+	return thumbnailFilename
 }

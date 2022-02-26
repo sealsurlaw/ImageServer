@@ -30,6 +30,9 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "filename")
 		return
 	}
+	if h.hashFilename {
+		filename = helper.CalculateHash(filename)
+	}
 
 	// file
 	r.ParseMultipartForm(math.MaxInt64)
