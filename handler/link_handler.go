@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sealsurlaw/ImageServer/helper"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
@@ -37,9 +36,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "filename")
 		return
 	}
-	if h.hashFilename {
-		filename = helper.CalculateHash(filename)
-	}
+	filename = h.getFilename(filename)
 
 	// expires - optional
 	expiresIn := r.URL.Query().Get("expires")

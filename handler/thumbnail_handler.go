@@ -93,10 +93,8 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) createThumbnail(filename string, resolution int, cropped bool) error {
 	// open file
-	if h.hashFilename {
-		filename = helper.CalculateHash(filename)
-	}
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
+	fn := h.getFilename(filename)
+	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, fn)
 	file, err := os.Open(fullFileName)
 	if err != nil {
 		return err
@@ -116,6 +114,10 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 	}
 
 	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	err = h.createDirectories(thumbnailFilename)
+	if err != nil {
+		return err
+	}
 	fullFileName = fmt.Sprintf("%s/%s", h.BasePath, thumbnailFilename)
 	err = os.WriteFile(fullFileName, fileData, 0600)
 	if err != nil {
@@ -125,6 +127,15 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 	return nil
 }
 
+func (h *Handler) getFilename(filename string) string {
+	if h.hashFilename {
+		filename = helper.CalculateHash(filename)
+		filename = fmt.Sprintf("%s/%s/%s", string(filename[0]), string(filename[1]), filename)
+	}
+
+	return filename
+}
+
 func (h *Handler) getThumbnailFilename(filename string, resolution int, cropped bool) string {
 	var thumbnailFilename string
 	if h.hashFilename {
@@ -132,7 +143,7 @@ func (h *Handler) getThumbnailFilename(filename string, resolution int, cropped 
 		if cropped {
 			filename += "crop"
 		}
-		thumbnailFilename = helper.CalculateHash(filename)
+		thumbnailFilename = h.getFilename(filename)
 	} else {
 		thumbnailFilename = fmt.Sprintf("%s_%d", filename, resolution)
 		if cropped {
