@@ -6,37 +6,36 @@ import (
 	"os"
 	"strings"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/helper"
+	"github.com/sealsurlaw/ImageServer/response"
 )
 
 func (h *Handler) Download(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		msg := "Method not found."
-		res := errs.NewErrorResponse(http.StatusBadRequest, msg)
-		helper.SendJson(w, res)
+		response.SendMethodNotFound(w)
 		return
 	}
 
 	if !h.hasWhitelistedToken(r) {
-		msg := "Invalid auth token."
-		res := errs.NewErrorResponse(http.StatusNotFound, msg, errs.ErrNotAuthorized)
-		helper.SendJson(w, res)
+		response.SendInvalidAuthToken(w)
 		return
 	}
 
+	// filename
 	pathArr := strings.Split(r.URL.Path, "/")
 	filename := pathArr[len(pathArr)-1]
+	if filename == "" {
+		response.SendBadRequest(w, "filename")
+		return
+	}
 
+	// open file
 	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
 	file, err := os.Open(fullFileName)
 	if err != nil {
-		msg := "Couldn't find file."
-		res := errs.NewErrorResponse(http.StatusNotFound, msg, err)
-		helper.SendJson(w, res)
+		response.SendCouldntFindImage(w, err)
 		return
 	}
 	defer file.Close()
 
-	helper.SendImage(w, file)
+	response.SendImage(w, file)
 }

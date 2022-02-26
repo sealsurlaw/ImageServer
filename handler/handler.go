@@ -3,11 +3,14 @@ package handler
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/sealsurlaw/ImageServer/config"
+	"github.com/sealsurlaw/ImageServer/errs"
 	"github.com/sealsurlaw/ImageServer/linkstore"
 )
 
@@ -95,4 +98,39 @@ func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
 	}
 
 	return auth
+}
+
+func (h *Handler) tryToAddLink(
+	fullFileName string,
+	expiresDuration time.Duration,
+) (*time.Time, int64, error) {
+	maxRetries := 10
+
+	var expiresAt time.Time
+	var token int64
+	tries := 0
+	for true {
+		tries++
+
+		expiresAt = time.Now().Add(expiresDuration)
+		token = rand.Int63()
+		err := h.LinkStore.AddLink(token, &linkstore.Link{
+			FullFilename: fullFileName,
+			ExpiresAt:    &expiresAt,
+		})
+
+		if err == nil {
+			break
+		}
+		if err != errs.ErrTokenAlreadyExists {
+			return nil, 0, err
+		}
+
+		// should never happen, but prevents a forever loop
+		if tries == maxRetries {
+			return nil, 0, errs.ErrTooManyAttempts
+		}
+	}
+
+	return &expiresAt, token, nil
 }

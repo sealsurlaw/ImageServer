@@ -54,6 +54,8 @@ func populateConfigWithDefaults(cfg *Config) {
 		cfg.BasePath = bp
 	}
 
+	fmt.Printf("Writing images to %s\n", cfg.BasePath)
+
 	if cfg.WhitelistedTokens == nil {
 		cfg.WhitelistedTokens = []string{}
 	}

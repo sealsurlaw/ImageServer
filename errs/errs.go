@@ -9,6 +9,10 @@ var ErrCannotConnectDatabase = fmt.Errorf("Cannot connect to the database.")
 
 var ErrTokenAlreadyExists = fmt.Errorf("Token already exists.")
 
+var ErrInvalidContentType = fmt.Errorf("Invalid content type.")
+
+var ErrTooManyAttempts = fmt.Errorf("Too many attempts tried")
+
 var ErrTokenNotFound = fmt.Errorf("Token not found.")
 
 var ErrNotAuthorized = fmt.Errorf("Not authorized.")

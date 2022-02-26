@@ -2,16 +2,12 @@ package handler
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/helper"
-	"github.com/sealsurlaw/ImageServer/linkstore"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
@@ -23,94 +19,81 @@ func (h *Handler) Link(w http.ResponseWriter, r *http.Request) {
 		h.getImageFromToken(w, r)
 		return
 	} else {
-		msg := "Method not found."
-		res := errs.NewErrorResponse(http.StatusBadRequest, msg)
-		helper.SendJson(w, res)
+		response.SendMethodNotFound(w)
 		return
 	}
 }
 
 func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	if !h.hasWhitelistedToken(r) {
-		msg := "Invalid auth token."
-		res := errs.NewErrorResponse(http.StatusNotFound, msg, errs.ErrNotAuthorized)
-		helper.SendJson(w, res)
+		response.SendInvalidAuthToken(w)
 		return
 	}
 
+	// filename
 	pathArr := strings.Split(r.URL.Path, "/")
 	filename := pathArr[len(pathArr)-1]
-
-	expiresIn := r.URL.Query().Get("expires")
-
 	if filename == "" {
-		msg := "No filename provided"
-		res := errs.NewErrorResponse(http.StatusBadRequest, msg)
-		helper.SendJson(w, res)
+		response.SendBadRequest(w, "filename")
 		return
 	}
 
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
-	file, err := os.Open(fullFileName)
-	if err != nil {
-		msg := "Couldn't find image."
-		res := errs.NewErrorResponse(http.StatusNotFound, msg, err)
-		helper.SendJson(w, res)
-		return
-	}
-	defer file.Close()
-
+	// expires - optional
+	expiresIn := r.URL.Query().Get("expires")
 	var expiresDuration time.Duration
-	expiresDuration, err = time.ParseDuration(expiresIn)
+	expiresDuration, err := time.ParseDuration(expiresIn)
 	if err != nil {
 		expiresDuration = 24 * time.Hour
 	}
 
-	expiresAt := time.Now().Add(expiresDuration)
-	token := rand.Int63()
+	// open file to make sure it exists
+	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
+	file, err := os.Open(fullFileName)
+	if err != nil {
+		response.SendCouldntFindImage(w, err)
+		return
+	}
+	defer file.Close()
 
-	h.LinkStore.AddLink(token, &linkstore.Link{
-		FullFilename: fullFileName,
-		ExpiresAt:    &expiresAt,
-	})
+	// create and add link to link store
+	expiresAt, token, err := h.tryToAddLink(fullFileName, expiresDuration)
+	if err != nil {
+		response.SendError(w, 500, err.Error(), err)
+	}
 
 	url := fmt.Sprintf("%s/link/%d", h.BaseUrl, token)
 
-	helper.SendJson(w, &response.GetLinkResponse{
+	response.SendJson(w, &response.GetLinkResponse{
 		Url:       url,
-		ExpiresAt: &expiresAt,
+		ExpiresAt: expiresAt,
 	})
 }
 
 func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
 	pathArr := strings.Split(r.URL.Path, "/")
-	tokenStr := pathArr[len(pathArr)-1]
 
-	if tokenStr == "" {
-		msg := "No token provided"
-		res := errs.NewErrorResponse(http.StatusBadRequest, msg)
-		helper.SendJson(w, res)
+	// token
+	tokenStr := pathArr[len(pathArr)-1]
+	token, err := strconv.ParseInt(tokenStr, 10, 64)
+	if tokenStr == "" || err != nil {
+		response.SendBadRequest(w, "token")
 		return
 	}
 
-	token, _ := strconv.ParseInt(tokenStr, 10, 64)
-
+	// get link from link store
 	link, err := h.LinkStore.GetLink(token)
 	if err != nil {
-		msg := err.Error()
-		res := errs.NewErrorResponse(http.StatusBadRequest, msg, err)
-		helper.SendJson(w, res)
+		response.SendError(w, 400, err.Error(), err)
 		return
 	}
 
+	// open file
 	file, err := os.Open(link.FullFilename)
 	if err != nil {
-		msg := "Couldn't find image."
-		res := errs.NewErrorResponse(http.StatusNotFound, msg, err)
-		helper.SendJson(w, res)
+		response.SendCouldntFindImage(w, err)
 		return
 	}
 	defer file.Close()
 
-	helper.SendImage(w, file)
+	response.SendImage(w, file)
 }

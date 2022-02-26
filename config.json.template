@@ -1,6 +1,6 @@
 {
     "port": "8080",
-    "basePath": "/MyVolume/example/ImageServer",
+    "basePath": "/Users/sealsurlaw/Downloads/imageserver",
     "baseUrl": "http://localhost:8080",
     "postgresqlConfig": {
         "enabled": true,
