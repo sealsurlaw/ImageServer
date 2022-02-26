@@ -1,0 +1,9 @@
+{
+    "port": "8080",
+    "basePath": "/MyVolume/example/ImageServer",
+    "baseUrl": "http://localhost:8080",
+    "postgresqlConfig": {
+        "enabled": true,
+        "databaseString": "postgresql://imageserver:abcd1234@localhost:5432/imageserver?sslmode=disable"
+    }
+}
