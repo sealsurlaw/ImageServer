@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/sealsurlaw/ImageServer/config"
 	"github.com/sealsurlaw/ImageServer/handler"
+	"github.com/sealsurlaw/ImageServer/helper"
 )
 
 func main() {
 	cfg := config.NewConfig()
 	h := handler.NewHandler(cfg)
+
+	// error handled in NewConfig
+	duration, _ := time.ParseDuration(cfg.CleanupDuration)
+	go helper.CleanExpiredTokens(h.LinkStore, duration)
 
 	http.HandleFunc("/ping", h.Ping)
 	http.HandleFunc("/link/", h.Link)

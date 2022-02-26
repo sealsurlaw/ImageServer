@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 type Config struct {
 	Port             string `json:"port"`
 	BaseUrl          string `json:"baseUrl"`
 	BasePath         string `json:"basePath"`
+	CleanupDuration  string `json:"cleanupDuration"`
 	PostgresqlConfig struct {
 		Enabled        bool   `json:"enabled"`
 		DatabaseString string `json:"databaseString"`
@@ -55,6 +57,13 @@ func populateConfigWithDefaults(cfg *Config) {
 	}
 
 	fmt.Printf("Writing images to %s\n", cfg.BasePath)
+
+	duration, err := time.ParseDuration(cfg.CleanupDuration)
+	if err != nil {
+		duration = time.Hour * 24
+	}
+	cfg.CleanupDuration = duration.String()
+	fmt.Println(cfg.CleanupDuration)
 
 	if cfg.WhitelistedTokens == nil {
 		cfg.WhitelistedTokens = []string{}

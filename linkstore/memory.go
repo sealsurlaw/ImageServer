@@ -49,3 +49,13 @@ func (s *MemoryLinkStore) GetLink(token int64) (*Link, error) {
 
 	return s.links[token], nil
 }
+
+func (s *MemoryLinkStore) Cleanup() error {
+	for token, link := range s.links {
+		if time.Now().After(*link.ExpiresAt) {
+			delete(s.links, token)
+		}
+	}
+
+	return nil
+}

@@ -2,6 +2,7 @@ package helper
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -10,10 +11,30 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/sealsurlaw/ImageServer/errs"
+	"github.com/sealsurlaw/ImageServer/linkstore"
 	"golang.org/x/image/draw"
 )
+
+func CleanExpiredTokens(ls linkstore.LinkStore, duration time.Duration) {
+	if duration == 0 {
+		fmt.Println("Cleanup turned off.")
+		return
+	}
+
+	timer := time.NewTicker(duration)
+
+	for {
+		select {
+		case <-timer.C:
+			fmt.Println("Cleaning up expired tokens...")
+			ls.Cleanup()
+			timer = time.NewTicker(duration)
+		}
+	}
+}
 
 func CreateThumbnail(file *os.File, resolution int, cropped bool) (io.Reader, error) {
 	fileData, err := ioutil.ReadAll(file)

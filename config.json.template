@@ -2,6 +2,7 @@
     "port": "8080",
     "basePath": "/Users/sealsurlaw/Downloads/imageserver",
     "baseUrl": "http://localhost:8080",
+    "cleanupDuration": "12h",
     "postgresqlConfig": {
         "enabled": true,
         "databaseString": "postgresql://imageserver:abcd1234@localhost:5432/imageserver?sslmode=disable"
