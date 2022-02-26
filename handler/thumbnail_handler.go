@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/sealsurlaw/ImageServer/helper"
@@ -30,8 +29,7 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	pathArr := strings.Split(r.URL.Path, "thumbnail/")
-	filename := pathArr[len(pathArr)-1]
+	filename := r.FormValue("filename")
 	if filename == "" {
 		response.SendBadRequest(w, "filename")
 		return

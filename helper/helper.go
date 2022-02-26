@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/gif"
 	"image/jpeg"
+	"image/png"
 	"io"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/sealsurlaw/ImageServer/errs"
 	"github.com/sealsurlaw/ImageServer/linkstore"
+	"golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
 )
 
@@ -34,9 +39,29 @@ func CleanExpiredTokens(ls linkstore.LinkStore, duration time.Duration) {
 }
 
 func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (io.Reader, error) {
-	img, _, err := image.Decode(file)
+	fileData, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, errs.ErrInvalidContentType
+		return nil, err
+	}
+	contentType := http.DetectContentType(fileData)
+
+	r := bytes.NewReader(fileData)
+
+	var img image.Image
+	switch contentType {
+	case "image/jpeg":
+		img, err = jpeg.Decode(r)
+	case "image/png":
+		img, err = png.Decode(r)
+	case "image/gif":
+		img, err = gif.Decode(r)
+	case "image/bmp":
+		img, err = bmp.Decode(r)
+	default:
+		err = errs.ErrInvalidContentType
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	var thumbImgScaled *image.RGBA
@@ -86,4 +111,19 @@ func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (
 	}
 
 	return buf, nil
+}
+
+func IsSupportedContentType(contentType string) bool {
+	switch contentType {
+	case "image/jpeg":
+		fallthrough
+	case "image/png":
+		fallthrough
+	case "image/gif":
+		fallthrough
+	case "image/bmp":
+		return true
+	}
+
+	return false
 }

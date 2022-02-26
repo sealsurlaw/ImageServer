@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/sealsurlaw/ImageServer/errs"
+	"github.com/sealsurlaw/ImageServer/helper"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
@@ -65,7 +66,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	contentType := http.DetectContentType(fileData)
-	if !strings.Contains(contentType, "image/") {
+	if !helper.IsSupportedContentType(contentType) {
 		msg := fmt.Sprintf("Content type %s not supported.", contentType)
 		response.SendError(w, 400, msg, errs.ErrInvalidContentType)
 		return

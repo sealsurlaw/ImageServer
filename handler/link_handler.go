@@ -31,8 +31,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	pathArr := strings.Split(r.URL.Path, "link/")
-	filename := pathArr[len(pathArr)-1]
+	filename := r.FormValue("filename")
 	if filename == "" {
 		response.SendBadRequest(w, "filename")
 		return
