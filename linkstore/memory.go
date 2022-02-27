@@ -27,14 +27,17 @@ func (s *MemoryLinkStore) AddLink(token int64, link *Link) error {
 	return nil
 }
 
-func (s *MemoryLinkStore) Cleanup() error {
-	for token, link := range s.links {
-		if time.Now().After(*link.ExpiresAt) {
-			delete(s.links, token)
-		}
+func (s *MemoryLinkStore) GetLink(token int64) (*Link, error) {
+	if s.links[token] == nil {
+		return nil, errs.ErrTokenNotFound
 	}
 
-	return nil
+	if time.Now().After(*s.links[token].ExpiresAt) {
+		s.DeleteLink(token)
+		return nil, errs.ErrTokenExpired
+	}
+
+	return s.links[token], nil
 }
 
 func (s *MemoryLinkStore) DeleteLink(token int64) error {
@@ -47,15 +50,12 @@ func (s *MemoryLinkStore) DeleteLink(token int64) error {
 	return nil
 }
 
-func (s *MemoryLinkStore) GetLink(token int64) (*Link, error) {
-	if s.links[token] == nil {
-		return nil, errs.ErrTokenNotFound
+func (s *MemoryLinkStore) Cleanup() error {
+	for token, link := range s.links {
+		if time.Now().After(*link.ExpiresAt) {
+			delete(s.links, token)
+		}
 	}
 
-	if time.Now().After(*s.links[token].ExpiresAt) {
-		s.DeleteLink(token)
-		return nil, errs.ErrTokenExpired
-	}
-
-	return s.links[token], nil
+	return nil
 }

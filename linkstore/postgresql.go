@@ -11,7 +11,8 @@ import (
 )
 
 type PostgresqlLinkStore struct {
-	db *sql.DB
+	db    *sql.DB
+	cache map[int64]*Link
 }
 
 func NewPostgresqlLinkStore(cfg *config.Config) (*PostgresqlLinkStore, error) {
@@ -23,9 +24,8 @@ func NewPostgresqlLinkStore(cfg *config.Config) (*PostgresqlLinkStore, error) {
 		return nil, errs.ErrCannotConnectDatabase
 	}
 
-	linkStore := &PostgresqlLinkStore{
-		db: db,
-	}
+	cache := make(map[int64]*Link)
+	linkStore := &PostgresqlLinkStore{db, cache}
 	linkStore.buildTable()
 
 	return linkStore, nil
@@ -47,6 +47,12 @@ func (s *PostgresqlLinkStore) buildTable() error {
 }
 
 func (s *PostgresqlLinkStore) AddLink(token int64, link *Link) error {
+	// check cache
+	if s.cache[token] != nil {
+		return errs.ErrTokenAlreadyExists
+	}
+
+	// check postgresql
 	var count int
 	err := s.db.QueryRow(`
 		SELECT
@@ -66,39 +72,72 @@ func (s *PostgresqlLinkStore) AddLink(token int64, link *Link) error {
 		return errs.ErrTokenAlreadyExists
 	}
 
-	_, err = s.db.Exec(`
-		INSERT INTO links (
+	// perform insert asynchronously
+	go func(cache *map[int64]*Link, token int64, link *Link) {
+		// insert into cache
+		s.cache[token] = link
+
+		// insert into postgresql
+		_, err = s.db.Exec(`
+			INSERT INTO links (
+				token,
+				filepath,
+				expires_at
+			) VALUES ($1, $2, $3)
+		`,
 			token,
-			filepath,
-			expires_at
-		) VALUES ($1, $2, $3)
-	`,
-		token,
-		link.FullFilename,
-		link.ExpiresAt,
-	)
-	if err != nil {
-		return err
-	}
+			link.FullFilename,
+			link.ExpiresAt,
+		)
+	}(&s.cache, token, link)
 
 	return nil
 }
 
-func (s *PostgresqlLinkStore) Cleanup() error {
-	_, err := s.db.Exec(`
-		DELETE FROM links WHERE
-			expires_at < $1
+func (s *PostgresqlLinkStore) GetLink(token int64) (*Link, error) {
+	link := &Link{}
+	if s.cache[token] != nil {
+		// check cache
+		link = s.cache[token]
+	} else {
+		// check postgresql
+		err := s.db.QueryRow(`
+		SELECT
+			filepath,
+			expires_at
+		FROM links WHERE
+			token = $1
 	`,
-		time.Now(),
-	)
-	if err != nil {
-		return err
+			token,
+		).Scan(
+			&link.FullFilename,
+			&link.ExpiresAt,
+		)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				return nil, errs.ErrTokenNotFound
+			}
+			return nil, err
+		}
+
+		// populate cache
+		s.cache[token] = link
 	}
 
-	return nil
+	// remove if expired
+	if time.Now().After(*link.ExpiresAt) {
+		s.DeleteLink(token)
+		return nil, errs.ErrTokenExpired
+	}
+
+	return link, nil
 }
 
 func (s *PostgresqlLinkStore) DeleteLink(token int64) error {
+	// remove from cache
+	delete(s.cache, token)
+
+	// remove from postgresql
 	res, err := s.db.Exec(`
 		DELETE FROM links WHERE
 			token = $1
@@ -119,32 +158,24 @@ func (s *PostgresqlLinkStore) DeleteLink(token int64) error {
 	return nil
 }
 
-func (s *PostgresqlLinkStore) GetLink(token int64) (*Link, error) {
-	link := &Link{}
-	err := s.db.QueryRow(`
-		SELECT
-			filepath,
-			expires_at
-		FROM links WHERE
-			token = $1
+func (s *PostgresqlLinkStore) Cleanup() error {
+	// cleaup cache
+	for token, link := range s.cache {
+		if time.Now().After(*link.ExpiresAt) {
+			delete(s.cache, token)
+		}
+	}
+
+	// cleanup postgresql
+	_, err := s.db.Exec(`
+		DELETE FROM links WHERE
+			expires_at < $1
 	`,
-		token,
-	).Scan(
-		&link.FullFilename,
-		&link.ExpiresAt,
+		time.Now(),
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errs.ErrTokenNotFound
-		}
-
-		return nil, err
+		return err
 	}
 
-	if time.Now().After(*link.ExpiresAt) {
-		s.DeleteLink(token)
-		return nil, errs.ErrTokenExpired
-	}
-
-	return link, nil
+	return nil
 }
