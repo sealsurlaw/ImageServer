@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -99,15 +100,15 @@ func (h *Handler) checkFileExists(filename string) (string, error) {
 func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, error) {
 	// open file to make sure it exists
 	thumbnailFilename := h.getThumbnailFilename(tp)
-	fullFilename := h.makeFullFilename(thumbnailFilename)
-	file, err := os.Open(fullFilename)
+	thumbnailFullFilename := h.makeFullFilename(thumbnailFilename)
+	file, err := os.Open(thumbnailFullFilename)
 	if err != nil {
 		// if not found, attempt to make it
 		err = h.createThumbnail(tp)
 		if err != nil {
 			return "", err
 		}
-		file, err = os.Open(fullFilename)
+		file, err = os.Open(thumbnailFullFilename)
 		if err != nil {
 			return "", err
 		}
@@ -117,7 +118,7 @@ func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, e
 		return "", err
 	}
 
-	return fullFilename, nil
+	return thumbnailFullFilename, nil
 }
 
 func (h *Handler) createDirectories(filename string) error {
@@ -162,21 +163,56 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 		return err
 	}
 
+	thumbnailFilename := h.getThumbnailFilename(tp)
+	thumbnailFullFilename := h.makeFullFilename(thumbnailFilename)
+
+	// update the deps file
+	err = h.updateDepsFile(fullFilename, thumbnailFullFilename)
+	if err != nil {
+		return err
+	}
+
 	// write file
 	fileData, err := ioutil.ReadAll(thumbFile)
 	if err != nil {
 		return err
 	}
 
-	thumbnailFilename := h.getThumbnailFilename(tp)
 	err = h.createDirectories(thumbnailFilename)
 	if err != nil {
 		return err
 	}
-	fullFilename = h.makeFullFilename(thumbnailFilename)
-	err = os.WriteFile(fullFilename, fileData, 0600)
+	err = os.WriteFile(thumbnailFullFilename, fileData, 0600)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (h *Handler) deleteDepFiles(fullFilename string) error {
+	depFullFilename := fmt.Sprintf("%s_deps", fullFilename)
+	depFile, err := os.Open(depFullFilename)
+	if err != nil {
+		return nil
+	}
+
+	scanner := bufio.NewScanner(depFile)
+	for scanner.Scan() {
+		err = os.Remove(scanner.Text())
+		if err != nil {
+			return nil
+		}
+	}
+	err = depFile.Close()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(depFullFilename)
+	err = os.Remove(depFullFilename)
+	if err != nil {
+		return nil
 	}
 
 	return nil
@@ -192,15 +228,16 @@ func (h *Handler) getProperFilename(filename string) string {
 }
 
 func (h *Handler) getThumbnailFilename(tp *ThumbnailParameters) string {
+	filename := tp.Filename
 	var thumbnailFilename string
 	if h.hashFilename {
-		tp.Filename += strconv.Itoa(tp.Resolution)
+		filename += strconv.Itoa(tp.Resolution)
 		if tp.Cropped {
-			tp.Filename += "crop"
+			filename += "crop"
 		}
-		thumbnailFilename = h.getProperFilename(tp.Filename)
+		thumbnailFilename = h.getProperFilename(filename)
 	} else {
-		thumbnailFilename = fmt.Sprintf("%s_%d", tp.Filename, tp.Resolution)
+		thumbnailFilename = fmt.Sprintf("%s_%d", filename, tp.Resolution)
 		if tp.Cropped {
 			thumbnailFilename += "_crop"
 		}
@@ -299,4 +336,27 @@ func (h *Handler) tryToAddLink(
 	}
 
 	return token, nil
+}
+
+func (h *Handler) updateDepsFile(fullFilename, thumbnailFullFilename string) error {
+	depsFilename := fmt.Sprintf("%s_deps", fullFilename)
+	depsFile, err := os.OpenFile(depsFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		err = os.WriteFile(depsFilename, []byte{}, 0600)
+		if err != nil {
+			return err
+		}
+		depsFile, err = os.OpenFile(depsFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			return err
+		}
+	}
+	defer depsFile.Close()
+
+	_, err = depsFile.WriteString(thumbnailFullFilename + "\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -56,7 +56,7 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	thumbnailParameters := &ThumbnailParameters{filename, resolution, cropped}
 	fullFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 	if err != nil {
-		response.SendError(w, 500, err.Error(), err)
+		response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
 		return
 	}
 

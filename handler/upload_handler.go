@@ -69,8 +69,16 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// write file
 	fullFilename := h.makeFullFilename(filename)
+
+	// delete files from dep file including itself
+	err = h.deleteDepFiles(fullFilename)
+	if err != nil {
+		response.SendError(w, 500, "Couldn't delete dependency files.", err)
+		return
+	}
+
+	// write file
 	err = os.WriteFile(fullFilename, fileData, 0600)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't write file.", err)

@@ -37,6 +37,7 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// open file
+	filename = h.getProperFilename(filename)
 	fullFileName := h.makeFullFilename(filename)
 	file, err := os.Open(fullFileName)
 	if err != nil {
