@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/sealsurlaw/ImageServer/errs"
 	"github.com/sealsurlaw/ImageServer/request"
 	"github.com/sealsurlaw/ImageServer/response"
 )
@@ -26,6 +27,11 @@ func (h *Handler) Thumbnail(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	if !h.hasWhitelistedToken(r) {
 		response.SendInvalidAuthToken(w)
+		return
+	}
+
+	if !h.hasWhitelistedIpAddress(r) {
+		response.SendError(w, 401, "Not on ip whitelist.", errs.ErrNotAuthorized)
 		return
 	}
 

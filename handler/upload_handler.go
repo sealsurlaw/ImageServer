@@ -28,6 +28,11 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !h.hasWhitelistedIpAddress(r) {
+		response.SendError(w, 401, "Not on ip whitelist.", errs.ErrNotAuthorized)
+		return
+	}
+
 	// filename
 	filename := r.FormValue("filename")
 	if filename == "" {

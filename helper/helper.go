@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -76,6 +77,22 @@ func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (
 	}
 
 	return buf, nil
+}
+
+func GetIpAddress(r *http.Request) string {
+	var ip string
+	if r.Header.Get("x-forward-for") != "" {
+		return r.Header.Get("x-forward-for")
+	}
+
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return ""
+	}
+
+	fmt.Println(ip)
+
+	return ip
 }
 
 func IsSupportedContentType(contentType string) bool {

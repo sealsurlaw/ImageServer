@@ -11,5 +11,9 @@
     },
     "whitelistedTokens": [
         "S0m3S3cr3t70k3n"
+    ],
+    "whitelistedIpAddresses": [
+        "192.168.1.1",
+        "*"
     ]
 }

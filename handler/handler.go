@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,22 +19,24 @@ import (
 )
 
 type Handler struct {
-	LinkStore         linkstore.LinkStore
-	BaseUrl           string
-	BasePath          string
-	thumbnailQuality  int
-	hashFilename      bool
-	whitelistedTokens []string
+	LinkStore              linkstore.LinkStore
+	BaseUrl                string
+	BasePath               string
+	thumbnailQuality       int
+	hashFilename           bool
+	whitelistedTokens      []string
+	whitelistedIpAddresses []string
 }
 
 func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
-		LinkStore:         getLinkStore(cfg),
-		BaseUrl:           getBaseUrl(cfg),
-		BasePath:          getBasePath(cfg),
-		thumbnailQuality:  cfg.ThumbnailQuality,
-		hashFilename:      cfg.HashFilename,
-		whitelistedTokens: cfg.WhitelistedTokens,
+		LinkStore:              getLinkStore(cfg),
+		BaseUrl:                getBaseUrl(cfg),
+		BasePath:               getBasePath(cfg),
+		thumbnailQuality:       cfg.ThumbnailQuality,
+		hashFilename:           cfg.HashFilename,
+		whitelistedTokens:      cfg.WhitelistedTokens,
+		whitelistedIpAddresses: cfg.WhitelistedIpAddresses,
 	}
 }
 
@@ -206,9 +209,31 @@ func (h *Handler) getThumbnailFilename(tp *ThumbnailParameters) string {
 	return thumbnailFilename
 }
 
+func (h *Handler) hasWhitelistedIpAddress(r *http.Request) bool {
+	ip := helper.GetIpAddress(r)
+	for _, ipAddr := range h.whitelistedIpAddresses {
+		if ipAddr == "*" {
+			return true
+		}
+
+		ip1 := net.ParseIP(ip)
+		ip2 := net.ParseIP(ipAddr)
+		if ip1.Equal(ip2) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
-	// If nothing configured, allow all
+	// If empty, block
 	if len(h.whitelistedTokens) == 0 {
+		return false
+	}
+
+	// allow all for '*'
+	if len(h.whitelistedTokens) == 1 && h.whitelistedTokens[0] == "*" {
 		return true
 	}
 

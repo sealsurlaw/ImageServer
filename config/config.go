@@ -20,7 +20,8 @@ type Config struct {
 		Enabled        bool   `json:"enabled"`
 		DatabaseString string `json:"databaseString"`
 	} `json:"postgresqlConfig"`
-	WhitelistedTokens []string `json:"whitelistedTokens"`
+	WhitelistedTokens      []string `json:"whitelistedTokens"`
+	WhitelistedIpAddresses []string `json:"whitelistedIpAddresses"`
 }
 
 func NewConfig() *Config {
@@ -36,7 +37,10 @@ func NewConfig() *Config {
 	if err != nil {
 		fmt.Println(err)
 	} else {
-		_ = json.Unmarshal(file, cfg)
+		err := json.Unmarshal(file, cfg)
+		if err != nil {
+			fmt.Println("Unable to parse config file.")
+		}
 	}
 
 	populateConfigWithDefaults(cfg)
@@ -51,6 +55,7 @@ func populateConfigWithDefaults(cfg *Config) {
 	cfg.CleanupDuration = configureCleanupDuration(cfg.CleanupDuration)
 	cfg.ThumbnailQuality = configureThumbnailQuality(cfg.ThumbnailQuality)
 	cfg.WhitelistedTokens = configureWhitelistedTokens(cfg.WhitelistedTokens)
+	cfg.WhitelistedIpAddresses = configureWhitelistedIpAddresses(cfg.WhitelistedIpAddresses)
 
 	fmt.Printf("Writing images to %s\n", cfg.BasePath)
 	fmt.Printf("Cleanup every %s\n", cfg.CleanupDuration)
@@ -98,9 +103,16 @@ func configureThumbnailQuality(thumbnailQuality int) int {
 
 func configureWhitelistedTokens(whitelistedTokens []string) []string {
 	if whitelistedTokens == nil {
-		whitelistedTokens = []string{}
+		whitelistedTokens = []string{"*"}
 	}
 	return whitelistedTokens
+}
+
+func configureWhitelistedIpAddresses(whitelistedIpAddresses []string) []string {
+	if whitelistedIpAddresses == nil {
+		whitelistedIpAddresses = []string{"*"}
+	}
+	return whitelistedIpAddresses
 }
 
 func basePathDoesNotExists(basePath string) bool {

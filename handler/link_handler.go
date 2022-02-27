@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/sealsurlaw/ImageServer/errs"
 	"github.com/sealsurlaw/ImageServer/request"
 	"github.com/sealsurlaw/ImageServer/response"
 )
@@ -24,6 +25,11 @@ func (h *Handler) Link(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	if !h.hasWhitelistedToken(r) {
 		response.SendInvalidAuthToken(w)
+		return
+	}
+
+	if !h.hasWhitelistedIpAddress(r) {
+		response.SendError(w, 401, "Not on ip whitelist.", errs.ErrNotAuthorized)
 		return
 	}
 
