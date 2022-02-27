@@ -3,9 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
-	"time"
 
 	"github.com/sealsurlaw/ImageServer/config"
 	"github.com/sealsurlaw/ImageServer/handler"
@@ -13,8 +11,6 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().Unix())
-
 	cfg := config.NewConfig()
 	h := handler.NewHandler(cfg)
 

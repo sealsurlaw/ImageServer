@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/sealsurlaw/ImageServer/errs"
 	"github.com/sealsurlaw/ImageServer/helper"
@@ -14,11 +13,16 @@ import (
 )
 
 func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
+	if r.Method == "POST" {
+		h.uploadFile(w, r)
+		return
+	} else {
 		response.SendMethodNotFound(w)
 		return
 	}
+}
 
+func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 	if !h.hasWhitelistedToken(r) {
 		response.SendInvalidAuthToken(w)
 		return
@@ -30,7 +34,7 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "filename")
 		return
 	}
-	filename = h.getFilename(filename)
+	filename = h.getProperFilename(filename)
 
 	// file
 	r.ParseMultipartForm(math.MaxInt64)
@@ -47,7 +51,6 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// write file
 	fileData, err := ioutil.ReadAll(file)
 	if err != nil {
 		response.SendError(w, 400, "Couldn't parse file.", err)
@@ -61,35 +64,13 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
-	err = os.WriteFile(fullFileName, fileData, 0600)
+	// write file
+	fullFilename := h.makeFullFilename(filename)
+	err = os.WriteFile(fullFilename, fileData, 0600)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't write file.", err)
 		return
 	}
 
-	response.SendJson(w, &response.UploadImageResponse{
-		Filename: filename,
-	})
-}
-
-func (h *Handler) createDirectories(filename string) error {
-	// check if directories need to be created
-	if strings.Contains(filename, "/") {
-		filenameSplit := strings.Split(filename, "/")
-		path := h.BasePath
-		for _, dir := range filenameSplit[:len(filenameSplit)-1] {
-			path += "/" + dir
-			_, err := os.ReadDir(path)
-			if err == nil {
-				continue
-			}
-			err = os.Mkdir(path, 0700)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+	w.WriteHeader(http.StatusCreated)
 }

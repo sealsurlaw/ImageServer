@@ -12,10 +12,6 @@ import (
 	"github.com/sealsurlaw/ImageServer/errs"
 )
 
-type UploadImageResponse struct {
-	Filename string `json:"filename"`
-}
-
 type GetLinkResponse struct {
 	Url       string     `json:"url"`
 	ExpiresAt *time.Time `json:"expiresAt"`
@@ -48,6 +44,11 @@ func SendError(w http.ResponseWriter, code int, msg string, er ...error) {
 	SendJson(w, res)
 }
 
+func SendBadRequest(w http.ResponseWriter, missingField string) {
+	msg := fmt.Sprintf("No %s provided.", missingField)
+	SendError(w, http.StatusBadRequest, msg)
+}
+
 func SendMethodNotFound(w http.ResponseWriter) {
 	SendError(w, http.StatusBadRequest, "Method not found.")
 }
@@ -58,9 +59,4 @@ func SendInvalidAuthToken(w http.ResponseWriter) {
 
 func SendCouldntFindImage(w http.ResponseWriter, err error) {
 	SendError(w, http.StatusNotFound, "Couldn't find image.", err)
-}
-
-func SendBadRequest(w http.ResponseWriter, missingField string) {
-	msg := fmt.Sprintf("No %s provided.", missingField)
-	SendError(w, http.StatusBadRequest, msg)
 }

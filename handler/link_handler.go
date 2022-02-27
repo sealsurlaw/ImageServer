@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
-	"time"
 
+	"github.com/sealsurlaw/ImageServer/handler/request"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
@@ -31,53 +28,38 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	filename := r.FormValue("filename")
-	if filename == "" {
+	filename, err := request.ParseFilename(r)
+	if err != nil {
 		response.SendBadRequest(w, "filename")
 		return
 	}
-	filename = h.getFilename(filename)
 
-	// expires - optional
-	expiresIn := r.URL.Query().Get("expires")
-	var expiresDuration time.Duration
-	expiresDuration, err := time.ParseDuration(expiresIn)
-	if err != nil {
-		expiresDuration = 24 * time.Hour
-	}
+	// optional queries
+	expiresAt := request.ParseExpires(r)
 
-	// open file to make sure it exists
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, filename)
-	file, err := os.Open(fullFileName)
+	fullFilename, err := h.checkFileExists(filename)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return
 	}
-	defer file.Close()
 
 	// create and add link to link store
-	expiresAt, token, err := h.tryToAddLink(fullFileName, expiresDuration)
+	token, err := h.tryToAddLink(fullFilename, expiresAt)
 	if err != nil {
 		response.SendError(w, 500, err.Error(), err)
 	}
 
-	url := fmt.Sprintf("%s/link/%d", h.BaseUrl, token)
-
 	response.SendJson(w, &response.GetLinkResponse{
-		Url:       url,
+		Url:       h.makeTokenUrl(token),
 		ExpiresAt: expiresAt,
 	})
 }
 
 func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
-	pathArr := strings.Split(r.URL.Path, "/")
-
 	// token
-	tokenStr := pathArr[len(pathArr)-1]
-	token, err := strconv.ParseInt(tokenStr, 10, 64)
-	if tokenStr == "" || err != nil {
+	token, err := request.ParseTokenFromUrl(r)
+	if err != nil {
 		response.SendBadRequest(w, "token")
-		return
 	}
 
 	// get link from link store

@@ -84,6 +84,20 @@ func (s *PostgresqlLinkStore) AddLink(token int64, link *Link) error {
 	return nil
 }
 
+func (s *PostgresqlLinkStore) Cleanup() error {
+	_, err := s.db.Exec(`
+		DELETE FROM links WHERE
+			expires_at < $1
+	`,
+		time.Now(),
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *PostgresqlLinkStore) DeleteLink(token int64) error {
 	res, err := s.db.Exec(`
 		DELETE FROM links WHERE
@@ -133,18 +147,4 @@ func (s *PostgresqlLinkStore) GetLink(token int64) (*Link, error) {
 	}
 
 	return link, nil
-}
-
-func (s *PostgresqlLinkStore) Cleanup() error {
-	_, err := s.db.Exec(`
-		DELETE FROM links WHERE
-			expires_at < $1
-	`,
-		time.Now(),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

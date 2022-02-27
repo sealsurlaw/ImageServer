@@ -3,3 +3,4 @@ ImageServer
 *.jpg
 *.jpeg
 *.png
+config.json

@@ -22,6 +22,11 @@ import (
 	"golang.org/x/image/draw"
 )
 
+func CalculateHash(str string) string {
+	s := sha512.Sum384([]byte(str))
+	return base64.URLEncoding.EncodeToString(s[:])
+}
+
 func CleanExpiredTokens(ls linkstore.LinkStore, durationStr string) {
 	// error handled in NewConfig
 	duration, _ := time.ParseDuration(durationStr)
@@ -130,9 +135,4 @@ func IsSupportedContentType(contentType string) bool {
 	}
 
 	return false
-}
-
-func CalculateHash(str string) string {
-	s := sha512.Sum384([]byte(str))
-	return base64.URLEncoding.EncodeToString(s[:])
 }

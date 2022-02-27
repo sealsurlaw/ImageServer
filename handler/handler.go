@@ -2,15 +2,18 @@ package handler
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/sealsurlaw/ImageServer/config"
 	"github.com/sealsurlaw/ImageServer/errs"
+	"github.com/sealsurlaw/ImageServer/helper"
 	"github.com/sealsurlaw/ImageServer/linkstore"
 )
 
@@ -74,6 +77,130 @@ func getLinkStore(cfg *config.Config) linkstore.LinkStore {
 	return linkStore
 }
 
+func (h *Handler) checkFileExists(filename string) (string, error) {
+	// open file to make sure it exists
+	filename = h.getProperFilename(filename)
+	fullFilename := h.makeFullFilename(filename)
+	file, err := os.Open(fullFilename)
+	if err != nil {
+		return "", err
+	}
+	err = file.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return fullFilename, nil
+}
+
+func (h *Handler) checkOrCreateThumbnailFile(filename string, resolution int, cropped bool) (string, error) {
+	// open file to make sure it exists
+	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	fullFilename := h.makeFullFilename(thumbnailFilename)
+	file, err := os.Open(fullFilename)
+	if err != nil {
+		// if not found, attempt to make it
+		err = h.createThumbnail(filename, resolution, cropped)
+		if err != nil {
+			return "", err
+		}
+		file, err = os.Open(fullFilename)
+		if err != nil {
+			return "", err
+		}
+	}
+	err = file.Close()
+	if err != nil {
+		return "", err
+	}
+
+	return fullFilename, nil
+}
+
+func (h *Handler) createDirectories(filename string) error {
+	// check if directories need to be created
+	if strings.Contains(filename, "/") {
+		filenameSplit := strings.Split(filename, "/")
+		path := h.BasePath
+		for _, dir := range filenameSplit[:len(filenameSplit)-1] {
+			path += "/" + dir
+			_, err := os.ReadDir(path)
+			if err == nil {
+				continue
+			}
+			err = os.Mkdir(path, 0700)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (h *Handler) createThumbnail(filename string, resolution int, cropped bool) error {
+	// open file
+	fn := h.getProperFilename(filename)
+	fullFilename := h.makeFullFilename(fn)
+	file, err := os.Open(fullFilename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// create thumbnail
+	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped, h.thumbnailQuality)
+	if err != nil {
+		return err
+	}
+
+	// write file
+	fileData, err := ioutil.ReadAll(thumbFile)
+	if err != nil {
+		return err
+	}
+
+	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	err = h.createDirectories(thumbnailFilename)
+	if err != nil {
+		return err
+	}
+	fullFilename = h.makeFullFilename(thumbnailFilename)
+	err = os.WriteFile(fullFilename, fileData, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *Handler) getProperFilename(filename string) string {
+	if h.hashFilename {
+		filename = helper.CalculateHash(filename)
+		filename = fmt.Sprintf("%s/%s/%s", string(filename[0]), string(filename[1]), filename)
+	}
+
+	return filename
+}
+
+func (h *Handler) getThumbnailFilename(filename string, resolution int, cropped bool) string {
+	var thumbnailFilename string
+	if h.hashFilename {
+		filename += strconv.Itoa(resolution)
+		if cropped {
+			filename += "crop"
+		}
+		thumbnailFilename = h.getProperFilename(filename)
+	} else {
+		thumbnailFilename = fmt.Sprintf("%s_%d", filename, resolution)
+		if cropped {
+			thumbnailFilename += "_crop"
+		}
+	}
+
+	return thumbnailFilename
+}
+
 func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
 	// If nothing configured, allow all
 	if len(h.whitelistedTokens) == 0 {
@@ -104,38 +231,42 @@ func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
 	return auth
 }
 
+func (h *Handler) makeFullFilename(filename string) string {
+	return fmt.Sprintf("%s/%s", h.BasePath, filename)
+}
+
+func (h *Handler) makeTokenUrl(token int64) string {
+	return fmt.Sprintf("%s/link/%d", h.BaseUrl, token)
+}
+
 func (h *Handler) tryToAddLink(
 	fullFileName string,
-	expiresDuration time.Duration,
-) (*time.Time, int64, error) {
+	expiresAt *time.Time,
+) (int64, error) {
 	maxRetries := 10
-
-	var expiresAt time.Time
 	var token int64
 	tries := 0
 	for true {
 		tries++
 
-		expiresAt = time.Now().Add(expiresDuration).UTC()
 		token = rand.Int63()
-
 		err := h.LinkStore.AddLink(token, &linkstore.Link{
 			FullFilename: fullFileName,
-			ExpiresAt:    &expiresAt,
+			ExpiresAt:    expiresAt,
 		})
 
 		if err == nil {
 			break
 		}
 		if err != errs.ErrTokenAlreadyExists {
-			return nil, 0, err
+			return 0, err
 		}
 
 		// should never happen, but prevents a forever loop
 		if tries == maxRetries {
-			return nil, 0, errs.ErrTooManyAttempts
+			return 0, errs.ErrTooManyAttempts
 		}
 	}
 
-	return &expiresAt, token, nil
+	return token, nil
 }

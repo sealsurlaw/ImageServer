@@ -1,14 +1,9 @@
 package handler
 
 import (
-	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
-	"strconv"
-	"time"
 
-	"github.com/sealsurlaw/ImageServer/helper"
+	"github.com/sealsurlaw/ImageServer/handler/request"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
@@ -28,128 +23,39 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// resolution
-	resolutionStr := r.FormValue("resolution")
-	resolution, err := strconv.Atoi(resolutionStr)
-	if resolutionStr == "" || err != nil {
-		response.SendBadRequest(w, "resolution")
-		return
-	}
-
 	// filename
-	filename := r.FormValue("filename")
-	if filename == "" {
+	filename, err := request.ParseFilename(r)
+	if err != nil {
 		response.SendBadRequest(w, "filename")
 		return
 	}
 
-	// expires - optional
-	expiresIn := r.URL.Query().Get("expires")
-	expiresDuration, err := time.ParseDuration(expiresIn)
+	// resolution
+	resolution, err := request.ParseResolution(r)
 	if err != nil {
-		expiresDuration = 24 * time.Hour
+		response.SendBadRequest(w, "resolution")
+		return
 	}
 
-	// cropped - optional
-	croppedStr := r.URL.Query().Get("cropped")
-	cropped, err := strconv.ParseBool(croppedStr)
-	if croppedStr == "" || err != nil {
-		cropped = false
-	}
+	// optional queries
+	cropped := request.ParseCropped(r)
+	expiresAt := request.ParseExpires(r)
 
-	// open file to make sure it exists
-	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, thumbnailFilename)
-	file, err := os.Open(fullFileName)
-	if err != nil {
-		// if not found, attempt to make it
-		err = h.createThumbnail(filename, resolution, cropped)
-		if err != nil {
-			response.SendError(w, 500, "Couldn't create thumbnail.", err)
-			return
-		}
-		file, err = os.Open(fullFileName)
-		if err != nil {
-			response.SendCouldntFindImage(w, err)
-			return
-		}
-	}
-	defer file.Close()
-
-	// create and add link to link store
-	expiresAt, token, err := h.tryToAddLink(fullFileName, expiresDuration)
+	fullFilename, err := h.checkOrCreateThumbnailFile(filename, resolution, cropped)
 	if err != nil {
 		response.SendError(w, 500, err.Error(), err)
 		return
 	}
 
-	url := fmt.Sprintf("%s/link/%d", h.BaseUrl, token)
+	// create and add link to link store
+	token, err := h.tryToAddLink(fullFilename, expiresAt)
+	if err != nil {
+		response.SendError(w, 500, err.Error(), err)
+		return
+	}
 
 	response.SendJson(w, &response.GetLinkResponse{
-		Url:       url,
+		Url:       h.makeTokenUrl(token),
 		ExpiresAt: expiresAt,
 	})
-}
-
-func (h *Handler) createThumbnail(filename string, resolution int, cropped bool) error {
-	// open file
-	fn := h.getFilename(filename)
-	fullFileName := fmt.Sprintf("%s/%s", h.BasePath, fn)
-	file, err := os.Open(fullFileName)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	// create thumbnail
-	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped, h.thumbnailQuality)
-	if err != nil {
-		return err
-	}
-
-	// write file
-	fileData, err := ioutil.ReadAll(thumbFile)
-	if err != nil {
-		return err
-	}
-
-	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
-	err = h.createDirectories(thumbnailFilename)
-	if err != nil {
-		return err
-	}
-	fullFileName = fmt.Sprintf("%s/%s", h.BasePath, thumbnailFilename)
-	err = os.WriteFile(fullFileName, fileData, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (h *Handler) getFilename(filename string) string {
-	if h.hashFilename {
-		filename = helper.CalculateHash(filename)
-		filename = fmt.Sprintf("%s/%s/%s", string(filename[0]), string(filename[1]), filename)
-	}
-
-	return filename
-}
-
-func (h *Handler) getThumbnailFilename(filename string, resolution int, cropped bool) string {
-	var thumbnailFilename string
-	if h.hashFilename {
-		filename += strconv.Itoa(resolution)
-		if cropped {
-			filename += "crop"
-		}
-		thumbnailFilename = h.getFilename(filename)
-	} else {
-		thumbnailFilename = fmt.Sprintf("%s_%d", filename, resolution)
-		if cropped {
-			thumbnailFilename += "_crop"
-		}
-	}
-
-	return thumbnailFilename
 }

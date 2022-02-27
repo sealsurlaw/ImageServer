@@ -19,6 +19,8 @@ var ErrNotAuthorized = fmt.Errorf("Not authorized.")
 
 var ErrTokenExpired = fmt.Errorf("Token expired.")
 
+var ErrBadRequest = fmt.Errorf("Bad request.")
+
 type ErrorResponse struct {
 	Code   int    `json:"code"`
 	Status string `json:"status"`
