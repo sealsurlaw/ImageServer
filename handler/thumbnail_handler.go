@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/sealsurlaw/ImageServer/handler/request"
+	"github.com/sealsurlaw/ImageServer/request"
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
