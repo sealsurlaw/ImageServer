@@ -90,8 +90,6 @@ func GetIpAddress(r *http.Request) string {
 		return ""
 	}
 
-	fmt.Println(ip)
-
 	return ip
 }
 
