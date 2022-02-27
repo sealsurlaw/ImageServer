@@ -40,7 +40,7 @@ func ParseFilename(r *http.Request) (string, error) {
 }
 
 func ParseFilenameFromUrl(r *http.Request) (string, error) {
-	pathArr := strings.Split(r.URL.Path, "/")
+	pathArr := strings.Split(r.URL.Path, "download/")
 	filename := pathArr[len(pathArr)-1]
 	if filename == "" {
 		return "", errs.ErrBadRequest

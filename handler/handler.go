@@ -93,14 +93,14 @@ func (h *Handler) checkFileExists(filename string) (string, error) {
 	return fullFilename, nil
 }
 
-func (h *Handler) checkOrCreateThumbnailFile(filename string, resolution int, cropped bool) (string, error) {
+func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, error) {
 	// open file to make sure it exists
-	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	thumbnailFilename := h.getThumbnailFilename(tp)
 	fullFilename := h.makeFullFilename(thumbnailFilename)
 	file, err := os.Open(fullFilename)
 	if err != nil {
 		// if not found, attempt to make it
-		err = h.createThumbnail(filename, resolution, cropped)
+		err = h.createThumbnail(tp)
 		if err != nil {
 			return "", err
 		}
@@ -138,9 +138,9 @@ func (h *Handler) createDirectories(filename string) error {
 	return nil
 }
 
-func (h *Handler) createThumbnail(filename string, resolution int, cropped bool) error {
+func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	// open file
-	fn := h.getProperFilename(filename)
+	fn := h.getProperFilename(tp.Filename)
 	fullFilename := h.makeFullFilename(fn)
 	file, err := os.Open(fullFilename)
 	if err != nil {
@@ -149,7 +149,12 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 	defer file.Close()
 
 	// create thumbnail
-	thumbFile, err := helper.CreateThumbnail(file, resolution, cropped, h.thumbnailQuality)
+	thumbFile, err := helper.CreateThumbnail(
+		file,
+		tp.Resolution,
+		tp.Cropped,
+		h.thumbnailQuality,
+	)
 	if err != nil {
 		return err
 	}
@@ -160,7 +165,7 @@ func (h *Handler) createThumbnail(filename string, resolution int, cropped bool)
 		return err
 	}
 
-	thumbnailFilename := h.getThumbnailFilename(filename, resolution, cropped)
+	thumbnailFilename := h.getThumbnailFilename(tp)
 	err = h.createDirectories(thumbnailFilename)
 	if err != nil {
 		return err
@@ -183,17 +188,17 @@ func (h *Handler) getProperFilename(filename string) string {
 	return filename
 }
 
-func (h *Handler) getThumbnailFilename(filename string, resolution int, cropped bool) string {
+func (h *Handler) getThumbnailFilename(tp *ThumbnailParameters) string {
 	var thumbnailFilename string
 	if h.hashFilename {
-		filename += strconv.Itoa(resolution)
-		if cropped {
-			filename += "crop"
+		tp.Filename += strconv.Itoa(tp.Resolution)
+		if tp.Cropped {
+			tp.Filename += "crop"
 		}
-		thumbnailFilename = h.getProperFilename(filename)
+		thumbnailFilename = h.getProperFilename(tp.Filename)
 	} else {
-		thumbnailFilename = fmt.Sprintf("%s_%d", filename, resolution)
-		if cropped {
+		thumbnailFilename = fmt.Sprintf("%s_%d", tp.Filename, tp.Resolution)
+		if tp.Cropped {
 			thumbnailFilename += "_crop"
 		}
 	}

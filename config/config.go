@@ -53,6 +53,7 @@ func populateConfigWithDefaults(cfg *Config) {
 	cfg.WhitelistedTokens = configureWhitelistedTokens(cfg.WhitelistedTokens)
 
 	fmt.Printf("Writing images to %s\n", cfg.BasePath)
+	fmt.Printf("Cleanup every %s\n", cfg.CleanupDuration)
 }
 
 func configurePort(port string) string {

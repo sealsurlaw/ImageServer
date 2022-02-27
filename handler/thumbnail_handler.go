@@ -7,6 +7,12 @@ import (
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
+type ThumbnailParameters struct {
+	Filename   string
+	Resolution int
+	Cropped    bool
+}
+
 func (h *Handler) Thumbnail(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		h.getThumbnailLink(w, r)
@@ -41,7 +47,8 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	cropped := request.ParseCropped(r)
 	expiresAt := request.ParseExpires(r)
 
-	fullFilename, err := h.checkOrCreateThumbnailFile(filename, resolution, cropped)
+	thumbnailParameters := &ThumbnailParameters{filename, resolution, cropped}
+	fullFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 	if err != nil {
 		response.SendError(w, 500, err.Error(), err)
 		return

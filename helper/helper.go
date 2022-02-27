@@ -55,60 +55,16 @@ func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (
 	contentType := http.DetectContentType(fileData)
 
 	r := bytes.NewReader(fileData)
-
-	var img image.Image
-	switch contentType {
-	case "image/jpeg":
-		img, err = jpeg.Decode(r)
-	case "image/png":
-		img, err = png.Decode(r)
-	case "image/gif":
-		img, err = gif.Decode(r)
-	case "image/bmp":
-		img, err = bmp.Decode(r)
-	default:
-		err = errs.ErrInvalidContentType
-	}
+	img, err := decodeImage(contentType, r)
 	if err != nil {
 		return nil, err
 	}
 
 	var thumbImgScaled *image.RGBA
 	if cropped {
-		smallestSide := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
-		rect := image.Rect(0, 0, smallestSide, smallestSide)
-		thumbImg := image.NewRGBA(rect)
-
-		var sp image.Point
-		if img.Bounds().Dx() > img.Bounds().Dy() {
-			x := int((img.Bounds().Dx() - img.Bounds().Dy()) / 2)
-			sp = image.Pt(x, 0)
-		} else {
-			y := int((img.Bounds().Dy() - img.Bounds().Dx()) / 2)
-			sp = image.Pt(0, y)
-		}
-
-		draw.Draw(thumbImg, rect, img, sp, draw.Src)
-
-		thumbImgScaled = image.NewRGBA(image.Rect(0, 0, resolution, resolution))
-		draw.NearestNeighbor.Scale(thumbImgScaled, thumbImgScaled.Bounds(), thumbImg, thumbImg.Bounds(), draw.Src, nil)
+		thumbImgScaled = cropAndScale(img, resolution)
 	} else {
-		smallestSide := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
-		largestSide := int(math.Max(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
-		ratio := float64(smallestSide) / float64(largestSide)
-
-		largestAfter := resolution
-		smallestAfter := int(float64(largestAfter) * ratio)
-
-		var rect image.Rectangle
-		if img.Bounds().Dy() == largestSide {
-			rect = image.Rect(0, 0, smallestAfter, largestAfter)
-		} else {
-			rect = image.Rect(0, 0, largestAfter, smallestAfter)
-		}
-
-		thumbImgScaled = image.NewRGBA(rect)
-		draw.NearestNeighbor.Scale(thumbImgScaled, thumbImgScaled.Bounds(), img, img.Bounds(), draw.Src, nil)
+		thumbImgScaled = scale(img, resolution)
 	}
 
 	buf := new(bytes.Buffer)
@@ -135,4 +91,60 @@ func IsSupportedContentType(contentType string) bool {
 	}
 
 	return false
+}
+
+func decodeImage(contentType string, r *bytes.Reader) (image.Image, error) {
+	switch contentType {
+	case "image/jpeg":
+		return jpeg.Decode(r)
+	case "image/png":
+		return png.Decode(r)
+	case "image/gif":
+		return gif.Decode(r)
+	case "image/bmp":
+		return bmp.Decode(r)
+	}
+
+	return nil, errs.ErrInvalidContentType
+}
+
+func cropAndScale(img image.Image, resolution int) *image.RGBA {
+	smallestSide := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
+	rect := image.Rect(0, 0, smallestSide, smallestSide)
+	thumbImg := image.NewRGBA(rect)
+
+	var sp image.Point
+	if img.Bounds().Dx() > img.Bounds().Dy() {
+		x := int((img.Bounds().Dx() - img.Bounds().Dy()) / 2)
+		sp = image.Pt(x, 0)
+	} else {
+		y := int((img.Bounds().Dy() - img.Bounds().Dx()) / 2)
+		sp = image.Pt(0, y)
+	}
+
+	draw.Draw(thumbImg, rect, img, sp, draw.Src)
+
+	thumbImgScaled := image.NewRGBA(image.Rect(0, 0, resolution, resolution))
+	draw.NearestNeighbor.Scale(thumbImgScaled, thumbImgScaled.Bounds(), thumbImg, thumbImg.Bounds(), draw.Src, nil)
+	return thumbImgScaled
+}
+
+func scale(img image.Image, resolution int) *image.RGBA {
+	smallestSide := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
+	largestSide := int(math.Max(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
+	ratio := float64(smallestSide) / float64(largestSide)
+
+	largestAfter := resolution
+	smallestAfter := int(float64(largestAfter) * ratio)
+
+	var rect image.Rectangle
+	if img.Bounds().Dy() == largestSide {
+		rect = image.Rect(0, 0, smallestAfter, largestAfter)
+	} else {
+		rect = image.Rect(0, 0, largestAfter, smallestAfter)
+	}
+
+	thumbImgScaled := image.NewRGBA(rect)
+	draw.NearestNeighbor.Scale(thumbImgScaled, thumbImgScaled.Bounds(), img, img.Bounds(), draw.Src, nil)
+	return thumbImgScaled
 }
