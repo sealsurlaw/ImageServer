@@ -46,8 +46,7 @@ func (h *Handler) createThumbnailLinks(w http.ResponseWriter, r *http.Request) {
 		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square}
 		fullFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 		if err != nil {
-			response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
-			return
+			continue
 		}
 
 		// create and add link to link store
