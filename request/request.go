@@ -1,6 +1,8 @@
 package request
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -9,19 +11,42 @@ import (
 	"github.com/sealsurlaw/ImageServer/errs"
 )
 
+type LinkRequest struct {
+	Filename string `json:"filename"`
+}
+
+type ThumbnailRequest struct {
+	Resolution int    `json:"resolution"`
+	Filename   string `json:"filename"`
+}
+
 type ThumbnailsRequest struct {
 	Resolution int      `json:"resolution"`
 	Filenames  []string `json:"filenames"`
 }
 
-func ParseCropped(r *http.Request) bool {
-	croppedStr := r.URL.Query().Get("cropped")
-	cropped, err := strconv.ParseBool(croppedStr)
-	if croppedStr == "" || err != nil {
+func ParseJson(r *http.Request, obj interface{}) error {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func ParseSquare(r *http.Request) bool {
+	squareStr := r.URL.Query().Get("square")
+	square, err := strconv.ParseBool(squareStr)
+	if squareStr == "" || err != nil {
 		return false
 	}
 
-	return cropped
+	return square
 }
 
 func ParseExpires(r *http.Request) *time.Time {
@@ -45,7 +70,7 @@ func ParseFilename(r *http.Request) (string, error) {
 }
 
 func ParseFilenameFromUrl(r *http.Request) (string, error) {
-	pathArr := strings.Split(r.URL.Path, "download/")
+	pathArr := strings.Split(r.URL.Path, "images/")
 	filename := pathArr[len(pathArr)-1]
 	if filename == "" {
 		return "", errs.ErrBadRequest

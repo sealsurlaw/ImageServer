@@ -9,7 +9,7 @@ import (
 	"github.com/sealsurlaw/ImageServer/response"
 )
 
-func (h *Handler) Link(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Links(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		h.createLink(w, r)
 		return
@@ -34,16 +34,17 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	filename, err := request.ParseFilename(r)
+	req := request.LinkRequest{}
+	err := request.ParseJson(r, &req)
 	if err != nil {
-		response.SendBadRequest(w, "filename")
+		response.SendError(w, 400, "Could not parse json request.", err)
 		return
 	}
 
 	// optional queries
 	expiresAt := request.ParseExpires(r)
 
-	fullFilename, err := h.checkFileExists(filename)
+	fullFilename, err := h.checkFileExists(req.Filename)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return

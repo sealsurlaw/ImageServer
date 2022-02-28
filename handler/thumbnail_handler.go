@@ -14,7 +14,7 @@ type ThumbnailParameters struct {
 	Cropped    bool
 }
 
-func (h *Handler) Thumbnail(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Thumbnails(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		h.getThumbnailLink(w, r)
 		return
@@ -35,25 +35,19 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// filename
-	filename, err := request.ParseFilename(r)
+	// request json
+	req := request.ThumbnailRequest{}
+	err := request.ParseJson(r, &req)
 	if err != nil {
-		response.SendBadRequest(w, "filename")
-		return
-	}
-
-	// resolution
-	resolution, err := request.ParseResolution(r)
-	if err != nil {
-		response.SendBadRequest(w, "resolution")
+		response.SendError(w, 400, "Could not parse json request.", err)
 		return
 	}
 
 	// optional queries
-	cropped := request.ParseCropped(r)
+	square := request.ParseSquare(r)
 	expiresAt := request.ParseExpires(r)
 
-	thumbnailParameters := &ThumbnailParameters{filename, resolution, cropped}
+	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square}
 	fullFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)

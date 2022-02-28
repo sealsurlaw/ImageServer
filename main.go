@@ -17,11 +17,11 @@ func main() {
 	go helper.CleanExpiredTokens(h.LinkStore, cfg.CleanupDuration)
 
 	http.HandleFunc("/ping", h.Ping)
-	http.HandleFunc("/link", h.Link)
-	http.HandleFunc("/link/", h.Link)
-	http.HandleFunc("/upload", h.Upload)
-	http.HandleFunc("/download/", h.Download)
-	http.HandleFunc("/thumbnail", h.Thumbnail)
+	http.HandleFunc("/links/", h.Links)
+	http.HandleFunc("/links", h.Links)
+	http.HandleFunc("/images/", h.UploadDownload)
+	http.HandleFunc("/images", h.UploadDownload)
+	http.HandleFunc("/thumbnails/batch", h.ThumbnailsBatch)
 	http.HandleFunc("/thumbnails", h.Thumbnails)
 
 	fmt.Printf(fmt.Sprintf("Starting server at port %s\n", cfg.Port))

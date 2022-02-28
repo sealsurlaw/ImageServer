@@ -209,7 +209,6 @@ func (h *Handler) deleteDepFiles(fullFilename string) error {
 		return err
 	}
 
-	fmt.Println(depFullFilename)
 	err = os.Remove(depFullFilename)
 	if err != nil {
 		return nil
@@ -303,7 +302,7 @@ func (h *Handler) makeFullFilename(filename string) string {
 }
 
 func (h *Handler) makeTokenUrl(token int64) string {
-	return fmt.Sprintf("%s/link/%d", h.BaseUrl, token)
+	return fmt.Sprintf("%s/links/%d", h.BaseUrl, token)
 }
 
 func (h *Handler) tryToAddLink(

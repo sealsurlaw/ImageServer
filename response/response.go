@@ -13,8 +13,13 @@ import (
 )
 
 type GetLinkResponse struct {
-	Url       string     `json:"url"`
 	ExpiresAt *time.Time `json:"expiresAt"`
+	Url       string     `json:"url"`
+}
+
+type GetThumbnailLinkResponse struct {
+	ExpiresAt *time.Time `json:"expiresAt"`
+	Url       string     `json:"url"`
 }
 
 type GetThumbnailLinksResponse struct {
