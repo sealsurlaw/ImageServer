@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/gif"
@@ -106,6 +107,20 @@ func IsSupportedContentType(contentType string) bool {
 	}
 
 	return false
+}
+
+func ParseJson(r *http.Request, obj interface{}) error {
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, obj)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func decodeImage(contentType string, r *bytes.Reader) (image.Image, error) {

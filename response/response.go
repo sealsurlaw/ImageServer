@@ -17,6 +17,11 @@ type GetLinkResponse struct {
 	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
+type GetThumbnailLinksResponse struct {
+	ExpiresAt     *time.Time        `json:"expiresAt"`
+	FilenameToUrl map[string]string `json:"filenameToUrl"`
+}
+
 func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 	j, err := json.Marshal(obj)
 	if err != nil {

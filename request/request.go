@@ -9,6 +9,11 @@ import (
 	"github.com/sealsurlaw/ImageServer/errs"
 )
 
+type ThumbnailsRequest struct {
+	Resolution int      `json:"resolution"`
+	Filenames  []string `json:"filenames"`
+}
+
 func ParseCropped(r *http.Request) bool {
 	croppedStr := r.URL.Query().Get("cropped")
 	cropped, err := strconv.ParseBool(croppedStr)
