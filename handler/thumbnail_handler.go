@@ -70,5 +70,5 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	response.SendJson(w, &response.GetLinkResponse{
 		Url:       h.makeTokenUrl(token),
 		ExpiresAt: expiresAt,
-	})
+	}, 200)
 }

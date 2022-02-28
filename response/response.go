@@ -17,13 +17,14 @@ type GetLinkResponse struct {
 	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
-func SendJson(w http.ResponseWriter, obj interface{}) {
+func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 	j, err := json.Marshal(obj)
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	w.Write(j)
 }
 
@@ -34,14 +35,14 @@ func SendImage(w http.ResponseWriter, file *os.File) {
 	}
 
 	contentType := http.DetectContentType(fileData)
-	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Content-Length", strconv.Itoa(len(fileData)))
+	w.Header().Add("Content-Type", contentType)
+	w.Header().Add("Content-Length", strconv.Itoa(len(fileData)))
 	w.Write(fileData)
 }
 
-func SendError(w http.ResponseWriter, code int, msg string, er ...error) {
-	res := errs.NewErrorResponse(code, msg, er...)
-	SendJson(w, res)
+func SendError(w http.ResponseWriter, code int, msg string, err ...error) {
+	res := errs.NewErrorResponse(code, msg, err...)
+	SendJson(w, res, code)
 }
 
 func SendBadRequest(w http.ResponseWriter, missingField string) {

@@ -58,7 +58,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	response.SendJson(w, &response.GetLinkResponse{
 		Url:       h.makeTokenUrl(token),
 		ExpiresAt: expiresAt,
-	})
+	}, 200)
 }
 
 func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
