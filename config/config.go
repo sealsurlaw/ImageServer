@@ -10,17 +10,12 @@ import (
 )
 
 type Config struct {
-	Port             string `json:"port"`
-	BaseUrl          string `json:"baseUrl"`
-	BasePath         string `json:"basePath"`
-	EncryptionSecret string `json:"encryptionSecret"`
-	ThumbnailQuality int    `json:"thumbnailQuality"`
-	CleanupDuration  string `json:"cleanupDuration"`
-	HashFilename     bool   `json:"hashFilename"`
-	PostgresqlConfig struct {
-		Enabled        bool   `json:"enabled"`
-		DatabaseString string `json:"databaseString"`
-	} `json:"postgresqlConfig"`
+	Port                   string   `json:"port"`
+	BaseUrl                string   `json:"baseUrl"`
+	BasePath               string   `json:"basePath"`
+	EncryptionSecret       string   `json:"encryptionSecret"`
+	ThumbnailQuality       int      `json:"thumbnailQuality"`
+	HashFilename           bool     `json:"hashFilename"`
 	WhitelistedTokens      []string `json:"whitelistedTokens"`
 	WhitelistedIpAddresses []string `json:"whitelistedIpAddresses"`
 }
@@ -53,14 +48,12 @@ func populateConfigWithDefaults(cfg *Config) {
 	cfg.Port = configurePort(cfg.Port)
 	cfg.BaseUrl = configureBaseUrl(cfg.BaseUrl, cfg.Port)
 	cfg.BasePath = configureBasePath(cfg.BasePath)
-	cfg.CleanupDuration = configureCleanupDuration(cfg.CleanupDuration)
 	cfg.EncryptionSecret = configureEncryptionSecret(cfg.EncryptionSecret)
 	cfg.ThumbnailQuality = configureThumbnailQuality(cfg.ThumbnailQuality)
 	cfg.WhitelistedTokens = configureWhitelistedTokens(cfg.WhitelistedTokens)
 	cfg.WhitelistedIpAddresses = configureWhitelistedIpAddresses(cfg.WhitelistedIpAddresses)
 
 	fmt.Printf("Writing images to %s\n", cfg.BasePath)
-	fmt.Printf("Cleanup every %s\n", cfg.CleanupDuration)
 }
 
 func configurePort(port string) string {
@@ -95,14 +88,6 @@ func configureEncryptionSecret(encryptionSecret string) string {
 		encryptionSecret = string(b)
 	}
 	return encryptionSecret
-}
-
-func configureCleanupDuration(cleanupDuration string) string {
-	duration, err := time.ParseDuration(cleanupDuration)
-	if err != nil {
-		duration = time.Hour * 24
-	}
-	return duration.String()
 }
 
 func configureThumbnailQuality(thumbnailQuality int) int {

@@ -8,9 +8,15 @@ import (
 	"github.com/sealsurlaw/gouvre/response"
 )
 
-func (h *Handler) ThumbnailsBatch(w http.ResponseWriter, r *http.Request) {
+type ThumbnailParameters struct {
+	Filename   string
+	Resolution int
+	Cropped    bool
+}
+
+func (h *Handler) Thumbnails(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		h.createThumbnailLinks(w, r)
+		h.getThumbnailLink(w, r)
 		return
 	} else {
 		response.SendMethodNotFound(w)
@@ -18,7 +24,7 @@ func (h *Handler) ThumbnailsBatch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) createThumbnailLinks(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	if !h.hasWhitelistedToken(r) {
 		response.SendInvalidAuthToken(w)
 		return
@@ -30,7 +36,7 @@ func (h *Handler) createThumbnailLinks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// request json
-	req := request.ThumbnailsRequest{}
+	req := request.ThumbnailRequest{}
 	err := request.ParseJson(r, &req)
 	if err != nil {
 		response.SendError(w, 400, "Could not parse json request.", err)
@@ -41,26 +47,21 @@ func (h *Handler) createThumbnailLinks(w http.ResponseWriter, r *http.Request) {
 	square := request.ParseSquare(r)
 	expiresAt := request.ParseExpires(r)
 
-	filenameToUrls := make(map[string]string)
-	for _, filename := range req.Filenames {
-		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square}
-		thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
-		if err != nil {
-			continue
-		}
-
-		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt)
-		if err != nil {
-			response.SendError(w, 500, "Couldn't create token.", err)
-			return
-		}
-
-		url := h.makeTokenUrl(token)
-		filenameToUrls[filename] = url
+	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square}
+	thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
+	if err != nil {
+		response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
+		return
 	}
 
-	response.SendJson(w, &response.GetThumbnailLinksResponse{
-		ExpiresAt:     expiresAt,
-		FilenameToUrl: filenameToUrls,
+	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt)
+	if err != nil {
+		response.SendError(w, 500, "Couldn't create token.", err)
+		return
+	}
+
+	response.SendJson(w, &response.GetLinkResponse{
+		Url:       h.makeTokenUrl(token),
+		ExpiresAt: expiresAt,
 	}, 200)
 }
