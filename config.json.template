@@ -1,14 +1,10 @@
 {
     "port": "8080",
-    "basePath": "/Users/example/Downloads/imageserver",
+    "basePath": "/Users/example/gouvre",
     "baseUrl": "http://localhost:8080",
-    "cleanupDuration": "12h",
+    "encryptionSecret": "Sea-Crit",
     "thumbnailQuality": 60,
     "hashFilename": false,
-    "postgresqlConfig": {
-        "enabled": true,
-        "databaseString": "postgresql://imageserver:abcd1234@localhost:5432/imageserver?sslmode=disable"
-    },
     "whitelistedTokens": [
         "S0m3S3cr3t70k3n"
     ],
