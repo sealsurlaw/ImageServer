@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/sealsurlaw/ImageServer/errs"
+	"github.com/sealsurlaw/gouvre/errs"
 )
 
 type GetLinkResponse struct {

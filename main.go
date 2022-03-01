@@ -5,16 +5,13 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/sealsurlaw/ImageServer/config"
-	"github.com/sealsurlaw/ImageServer/handler"
-	"github.com/sealsurlaw/ImageServer/helper"
+	"github.com/sealsurlaw/gouvre/config"
+	"github.com/sealsurlaw/gouvre/handler"
 )
 
 func main() {
 	cfg := config.NewConfig()
 	h := handler.NewHandler(cfg)
-
-	go helper.CleanExpiredTokens(h.LinkStore, cfg.CleanupDuration)
 
 	http.HandleFunc("/ping", h.Ping)
 	http.HandleFunc("/links/", h.Links)

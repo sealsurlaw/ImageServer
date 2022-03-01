@@ -3,9 +3,9 @@ package handler
 import (
 	"net/http"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/request"
-	"github.com/sealsurlaw/ImageServer/response"
+	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/request"
+	"github.com/sealsurlaw/gouvre/response"
 )
 
 func (h *Handler) ThumbnailsBatch(w http.ResponseWriter, r *http.Request) {
@@ -44,15 +44,14 @@ func (h *Handler) createThumbnailLinks(w http.ResponseWriter, r *http.Request) {
 	filenameToUrls := make(map[string]string)
 	for _, filename := range req.Filenames {
 		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square}
-		fullFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
+		thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 		if err != nil {
 			continue
 		}
 
-		// create and add link to link store
-		token, err := h.tryToAddLink(fullFilename, expiresAt)
+		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt)
 		if err != nil {
-			response.SendError(w, 500, err.Error(), err)
+			response.SendError(w, 500, "Couldn't create token.", err)
 			return
 		}
 

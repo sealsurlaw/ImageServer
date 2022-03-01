@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sealsurlaw/ImageServer/errs"
+	"github.com/sealsurlaw/gouvre/errs"
 )
 
 type LinkRequest struct {
@@ -89,12 +89,11 @@ func ParseResolution(r *http.Request) (int, error) {
 	return resolution, nil
 }
 
-func ParseTokenFromUrl(r *http.Request) (int64, error) {
+func ParseTokenFromUrl(r *http.Request) (string, error) {
 	pathArr := strings.Split(r.URL.Path, "/")
-	tokenStr := pathArr[len(pathArr)-1]
-	token, err := strconv.ParseInt(tokenStr, 10, 64)
-	if tokenStr == "" || err != nil {
-		return 0, errs.ErrBadRequest
+	token := pathArr[len(pathArr)-1]
+	if token == "" {
+		return "", errs.ErrBadRequest
 	}
 
 	return token, nil

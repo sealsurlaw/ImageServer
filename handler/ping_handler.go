@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/sealsurlaw/ImageServer/response"
+	"github.com/sealsurlaw/gouvre/response"
 )
 
 func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {

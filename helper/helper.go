@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/base64"
-	"fmt"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -15,10 +14,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/linkstore"
+	"github.com/sealsurlaw/gouvre/errs"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
 )
@@ -26,26 +23,6 @@ import (
 func CalculateHash(str string) string {
 	s := sha512.Sum384([]byte(str))
 	return base64.URLEncoding.EncodeToString(s[:])
-}
-
-func CleanExpiredTokens(ls linkstore.LinkStore, durationStr string) {
-	// error handled in NewConfig
-	duration, _ := time.ParseDuration(durationStr)
-	if duration == 0 {
-		fmt.Println("Cleanup turned off.")
-		return
-	}
-
-	timer := time.NewTicker(duration)
-
-	for {
-		select {
-		case <-timer.C:
-			fmt.Println("Cleaning up expired tokens...")
-			ls.Cleanup()
-			timer = time.NewTicker(duration)
-		}
-	}
 }
 
 func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (io.Reader, error) {

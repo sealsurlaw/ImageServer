@@ -3,10 +3,11 @@ package handler
 import (
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/request"
-	"github.com/sealsurlaw/ImageServer/response"
+	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/request"
+	"github.com/sealsurlaw/gouvre/response"
 )
 
 func (h *Handler) Links(w http.ResponseWriter, r *http.Request) {
@@ -44,16 +45,16 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	// optional queries
 	expiresAt := request.ParseExpires(r)
 
-	fullFilename, err := h.checkFileExists(req.Filename)
+	filename, err := h.checkFileExists(req.Filename)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return
 	}
 
-	// create and add link to link store
-	token, err := h.tryToAddLink(fullFilename, expiresAt)
+	token, err := h.tokenizer.CreateToken(filename, expiresAt)
 	if err != nil {
-		response.SendError(w, 500, err.Error(), err)
+		response.SendError(w, 500, "Couldn't create token.", err)
+		return
 	}
 
 	response.SendJson(w, &response.GetLinkResponse{
@@ -69,15 +70,20 @@ func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "token")
 	}
 
-	// get link from link store
-	link, err := h.LinkStore.GetLink(token)
+	filename, expiresAt, err := h.tokenizer.ParseToken(token)
 	if err != nil {
-		response.SendError(w, 400, err.Error(), err)
+		response.SendError(w, 500, "Couldn't create token.", err)
+		return
+	}
+
+	if time.Now().After(*expiresAt) {
+		response.SendError(w, 400, "Bad token.", errs.ErrTokenExpired)
 		return
 	}
 
 	// open file
-	file, err := os.Open(link.FullFilename)
+	fullFilePath := h.makeFullFilePath(filename)
+	file, err := os.Open(fullFilePath)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return

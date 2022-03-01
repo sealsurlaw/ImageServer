@@ -3,9 +3,9 @@ package handler
 import (
 	"net/http"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/request"
-	"github.com/sealsurlaw/ImageServer/response"
+	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/request"
+	"github.com/sealsurlaw/gouvre/response"
 )
 
 type ThumbnailParameters struct {
@@ -48,16 +48,15 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	expiresAt := request.ParseExpires(r)
 
 	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square}
-	fullFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
+	thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
 		return
 	}
 
-	// create and add link to link store
-	token, err := h.tryToAddLink(fullFilename, expiresAt)
+	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt)
 	if err != nil {
-		response.SendError(w, 500, err.Error(), err)
+		response.SendError(w, 500, "Couldn't create token.", err)
 		return
 	}
 

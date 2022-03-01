@@ -1,4 +1,4 @@
-module github.com/sealsurlaw/ImageServer
+module github.com/sealsurlaw/gouvre
 
 go 1.17
 

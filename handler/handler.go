@@ -5,24 +5,21 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
-	"github.com/sealsurlaw/ImageServer/config"
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/helper"
-	"github.com/sealsurlaw/ImageServer/linkstore"
+	"github.com/sealsurlaw/gouvre/config"
+	"github.com/sealsurlaw/gouvre/helper"
+	"github.com/sealsurlaw/gouvre/token"
 )
 
 type Handler struct {
-	LinkStore              linkstore.LinkStore
 	BaseUrl                string
 	BasePath               string
+	tokenizer              token.Tokenizer
 	thumbnailQuality       int
 	hashFilename           bool
 	whitelistedTokens      []string
@@ -30,10 +27,14 @@ type Handler struct {
 }
 
 func NewHandler(cfg *config.Config) *Handler {
+	tokenizer, err := token.NewTokenizer(cfg.EncryptionSecret)
+	if err != nil {
+		log.Fatal(err)
+	}
 	return &Handler{
-		LinkStore:              getLinkStore(cfg),
 		BaseUrl:                getBaseUrl(cfg),
 		BasePath:               getBasePath(cfg),
+		tokenizer:              *tokenizer,
 		thumbnailQuality:       cfg.ThumbnailQuality,
 		hashFilename:           cfg.HashFilename,
 		whitelistedTokens:      cfg.WhitelistedTokens,
@@ -63,28 +64,10 @@ func getBasePath(cfg *config.Config) string {
 	return basePath
 }
 
-func getLinkStore(cfg *config.Config) linkstore.LinkStore {
-	var linkStore linkstore.LinkStore
-	linkStore = linkstore.NewMemoryLinkStore()
-	if cfg.PostgresqlConfig.Enabled {
-		ls, err := linkstore.NewPostgresqlLinkStore(cfg)
-		if err != nil {
-			fmt.Println("PostgreSQL connection failed. Falling back to memory link store.")
-		} else {
-			linkStore = ls
-			fmt.Println("Connected to PostgreSQL link store.")
-		}
-	} else {
-		fmt.Println("Connected to Memory link store.")
-	}
-
-	return linkStore
-}
-
 func (h *Handler) checkFileExists(filename string) (string, error) {
 	// open file to make sure it exists
 	filename = h.getProperFilename(filename)
-	fullFilename := h.makeFullFilename(filename)
+	fullFilename := h.makeFullFilePath(filename)
 	file, err := os.Open(fullFilename)
 	if err != nil {
 		return "", err
@@ -94,13 +77,13 @@ func (h *Handler) checkFileExists(filename string) (string, error) {
 		return "", err
 	}
 
-	return fullFilename, nil
+	return filename, nil
 }
 
 func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, error) {
 	// open file to make sure it exists
 	thumbnailFilename := h.getThumbnailFilename(tp)
-	thumbnailFullFilename := h.makeFullFilename(thumbnailFilename)
+	thumbnailFullFilename := h.makeFullFilePath(thumbnailFilename)
 	file, err := os.Open(thumbnailFullFilename)
 	if err != nil {
 		// if not found, attempt to make it
@@ -118,7 +101,7 @@ func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, e
 		return "", err
 	}
 
-	return thumbnailFullFilename, nil
+	return thumbnailFilename, nil
 }
 
 func (h *Handler) createDirectories(filename string) error {
@@ -145,7 +128,7 @@ func (h *Handler) createDirectories(filename string) error {
 func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	// open file
 	fn := h.getProperFilename(tp.Filename)
-	fullFilename := h.makeFullFilename(fn)
+	fullFilename := h.makeFullFilePath(fn)
 	file, err := os.Open(fullFilename)
 	if err != nil {
 		return err
@@ -164,7 +147,7 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	}
 
 	thumbnailFilename := h.getThumbnailFilename(tp)
-	thumbnailFullFilename := h.makeFullFilename(thumbnailFilename)
+	thumbnailFullFilename := h.makeFullFilePath(thumbnailFilename)
 
 	// update the deps file
 	err = h.updateDepsFile(fullFilename, thumbnailFullFilename)
@@ -297,44 +280,12 @@ func (h *Handler) hasWhitelistedToken(r *http.Request) bool {
 	return auth
 }
 
-func (h *Handler) makeFullFilename(filename string) string {
+func (h *Handler) makeFullFilePath(filename string) string {
 	return fmt.Sprintf("%s/%s", h.BasePath, filename)
 }
 
-func (h *Handler) makeTokenUrl(token int64) string {
-	return fmt.Sprintf("%s/links/%d", h.BaseUrl, token)
-}
-
-func (h *Handler) tryToAddLink(
-	fullFileName string,
-	expiresAt *time.Time,
-) (int64, error) {
-	maxRetries := 10
-	var token int64
-	tries := 0
-	for true {
-		tries++
-
-		token = rand.Int63()
-		err := h.LinkStore.AddLink(token, &linkstore.Link{
-			FullFilename: fullFileName,
-			ExpiresAt:    expiresAt,
-		})
-
-		if err == nil {
-			break
-		}
-		if err != errs.ErrTokenAlreadyExists {
-			return 0, err
-		}
-
-		// should never happen, but prevents a forever loop
-		if tries == maxRetries {
-			return 0, errs.ErrTooManyAttempts
-		}
-	}
-
-	return token, nil
+func (h *Handler) makeTokenUrl(token string) string {
+	return fmt.Sprintf("%s/links/%s", h.BaseUrl, token)
 }
 
 func (h *Handler) updateDepsFile(fullFilename, thumbnailFullFilename string) error {

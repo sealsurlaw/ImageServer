@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/sealsurlaw/ImageServer/errs"
-	"github.com/sealsurlaw/ImageServer/helper"
-	"github.com/sealsurlaw/ImageServer/request"
-	"github.com/sealsurlaw/ImageServer/response"
+	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/helper"
+	"github.com/sealsurlaw/gouvre/request"
+	"github.com/sealsurlaw/gouvre/response"
 )
 
 func (h *Handler) UploadDownload(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,7 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 
 	// open file
 	filename = h.getProperFilename(filename)
-	fullFileName := h.makeFullFilename(filename)
+	fullFileName := h.makeFullFilePath(filename)
 	file, err := os.Open(fullFileName)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
@@ -103,7 +103,7 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullFilename := h.makeFullFilename(filename)
+	fullFilename := h.makeFullFilePath(filename)
 
 	// delete files from dep file including itself
 	err = h.deleteDepFiles(fullFilename)
