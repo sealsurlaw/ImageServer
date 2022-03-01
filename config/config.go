@@ -13,6 +13,7 @@ type Config struct {
 	Port             string `json:"port"`
 	BaseUrl          string `json:"baseUrl"`
 	BasePath         string `json:"basePath"`
+	EncryptionSecret string `json:"encryptionSecret"`
 	ThumbnailQuality int    `json:"thumbnailQuality"`
 	CleanupDuration  string `json:"cleanupDuration"`
 	HashFilename     bool   `json:"hashFilename"`
@@ -53,6 +54,7 @@ func populateConfigWithDefaults(cfg *Config) {
 	cfg.BaseUrl = configureBaseUrl(cfg.BaseUrl, cfg.Port)
 	cfg.BasePath = configureBasePath(cfg.BasePath)
 	cfg.CleanupDuration = configureCleanupDuration(cfg.CleanupDuration)
+	cfg.EncryptionSecret = configureEncryptionSecret(cfg.EncryptionSecret)
 	cfg.ThumbnailQuality = configureThumbnailQuality(cfg.ThumbnailQuality)
 	cfg.WhitelistedTokens = configureWhitelistedTokens(cfg.WhitelistedTokens)
 	cfg.WhitelistedIpAddresses = configureWhitelistedIpAddresses(cfg.WhitelistedIpAddresses)
@@ -84,6 +86,15 @@ func configureBasePath(basePath string) string {
 		basePath = bp
 	}
 	return basePath
+}
+
+func configureEncryptionSecret(encryptionSecret string) string {
+	if encryptionSecret == "" {
+		b := make([]byte, 256)
+		_, _ = rand.Read(b)
+		encryptionSecret = string(b)
+	}
+	return encryptionSecret
 }
 
 func configureCleanupDuration(cleanupDuration string) string {
