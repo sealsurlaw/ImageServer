@@ -90,5 +90,5 @@ func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	response.SendImage(w, file)
+	response.SendImage(w, file, expiresAt)
 }

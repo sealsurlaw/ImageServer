@@ -117,7 +117,7 @@ func cropAndScale(img image.Image, resolution int) *image.RGBA {
 	draw.Draw(thumbImg, rect, img, sp, draw.Src)
 
 	thumbImgScaled := image.NewRGBA(image.Rect(0, 0, resolution, resolution))
-	draw.NearestNeighbor.Scale(thumbImgScaled, thumbImgScaled.Bounds(), thumbImg, thumbImg.Bounds(), draw.Src, nil)
+	draw.BiLinear.Scale(thumbImgScaled, thumbImgScaled.Bounds(), thumbImg, thumbImg.Bounds(), draw.Src, nil)
 	return thumbImgScaled
 }
 

@@ -53,7 +53,7 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	response.SendImage(w, file)
+	response.SendImage(w, file, nil)
 }
 
 func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {

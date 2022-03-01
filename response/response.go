@@ -38,12 +38,16 @@ func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 	w.Write(j)
 }
 
-func SendImage(w http.ResponseWriter, file *os.File) {
+func SendImage(w http.ResponseWriter, file *os.File, expiresAt *time.Time) {
 	fileData, err := ioutil.ReadAll(file)
 	if err != nil {
 		fmt.Println(err)
 	}
 
+	if expiresAt != nil {
+		cacheControl := fmt.Sprintf("public, max-age=%d", int(expiresAt.Sub(time.Now()).Seconds()))
+		w.Header().Add("Cache-Control", cacheControl)
+	}
 	contentType := http.DetectContentType(fileData)
 	w.Header().Add("Content-Type", contentType)
 	w.Header().Add("Content-Length", strconv.Itoa(len(fileData)))

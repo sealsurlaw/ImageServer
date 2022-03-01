@@ -19,7 +19,7 @@ import (
 type Handler struct {
 	BaseUrl                string
 	BasePath               string
-	tokenizer              token.Tokenizer
+	tokenizer              *token.Tokenizer
 	thumbnailQuality       int
 	hashFilename           bool
 	whitelistedTokens      []string
@@ -34,7 +34,7 @@ func NewHandler(cfg *config.Config) *Handler {
 	return &Handler{
 		BaseUrl:                getBaseUrl(cfg),
 		BasePath:               getBasePath(cfg),
-		tokenizer:              *tokenizer,
+		tokenizer:              tokenizer,
 		thumbnailQuality:       cfg.ThumbnailQuality,
 		hashFilename:           cfg.HashFilename,
 		whitelistedTokens:      cfg.WhitelistedTokens,
