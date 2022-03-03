@@ -12,6 +12,7 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/sealsurlaw/gouvre/errs"
 	"golang.org/x/image/bmp"
@@ -82,6 +83,21 @@ func IsSupportedContentType(contentType string) bool {
 	}
 
 	return false
+}
+
+func OpenFile(fullFilePath string) ([]byte, error) {
+	file, err := os.Open(fullFilePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	fileData, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
 }
 
 func decodeImage(contentType string, r *bytes.Reader) (image.Image, error) {

@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/sealsurlaw/gouvre/errs"
@@ -47,7 +45,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	// optional queries
 	expiresAt := request.ParseExpires(r)
 
-	filename, err := h.checkFileExists(req.Filename)
+	filename, err := h.checkFileExists(req.Filename, req.EncryptionSecret)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return
@@ -85,25 +83,15 @@ func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
 
 	// open file
 	fullFilePath := h.makeFullFilePath(filename)
-	file, err := os.Open(fullFilePath)
-	if err != nil {
-		response.SendCouldntFindImage(w, err)
-		return
-	}
-	defer file.Close()
-
-	fileData, err := ioutil.ReadAll(file)
+	fileData, err := helper.OpenFile(fullFilePath)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't read file data.", err)
 		return
 	}
 
-	if encryptionSecret != "" {
-		fileData, err = helper.Decrypt(fileData, encryptionSecret)
-		if err != nil {
-			response.SendError(w, 500, "Couldn't decrypt file.", err)
-			return
-		}
+	if h.tryDecryptFile(&fileData, encryptionSecret) != nil {
+		response.SendError(w, 500, "Couldn't decrypt file.", err)
+		return
 	}
 
 	response.SendImage(w, fileData, expiresAt)

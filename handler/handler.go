@@ -3,7 +3,6 @@ package handler
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -65,17 +64,17 @@ func getBasePath(cfg *config.Config) string {
 	return basePath
 }
 
-func (h *Handler) checkFileExists(filename string) (string, error) {
+func (h *Handler) checkFileExists(filename string, encryptionSecret string) (string, error) {
 	// open file to make sure it exists
 	filename = h.getProperFilename(filename)
-	fullFilename := h.makeFullFilePath(filename)
-	file, err := os.Open(fullFilename)
+	fullFilePath := h.makeFullFilePath(filename)
+	fileData, err := helper.OpenFile(fullFilePath)
 	if err != nil {
 		return "", err
 	}
-	err = file.Close()
-	if err != nil {
-		return "", err
+
+	if h.tryDecryptFile(&fileData, encryptionSecret) != nil {
+		return "", errs.ErrBadEncryptionSecret
 	}
 
 	return filename, nil
@@ -84,24 +83,19 @@ func (h *Handler) checkFileExists(filename string) (string, error) {
 func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, error) {
 	// open file to make sure it exists
 	thumbnailFilename := h.getThumbnailFilename(tp)
-	thumbnailFullFilename := h.makeFullFilePath(thumbnailFilename)
-	file, err := os.Open(thumbnailFullFilename)
+	thumbnailfullFilePath := h.makeFullFilePath(thumbnailFilename)
+	fileData, err := helper.OpenFile(thumbnailFilename)
 	if err != nil {
 		// if not found, attempt to make it
 		err = h.createThumbnail(tp)
 		if err != nil {
 			return "", err
 		}
-		file, err = os.Open(thumbnailFullFilename)
+
+		fileData, err = helper.OpenFile(thumbnailfullFilePath)
 		if err != nil {
 			return "", err
 		}
-	}
-	defer file.Close()
-
-	fileData, err := ioutil.ReadAll(file)
-	if err != nil {
-		return "", err
 	}
 
 	if h.tryDecryptFile(&fileData, tp.EncryptionSecret) != nil {
@@ -135,14 +129,8 @@ func (h *Handler) createDirectories(filename string) error {
 func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	// open file
 	fn := h.getProperFilename(tp.Filename)
-	fullFilename := h.makeFullFilePath(fn)
-	file, err := os.Open(fullFilename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	fileData, err := ioutil.ReadAll(file)
+	fullFilePath := h.makeFullFilePath(fn)
+	fileData, err := helper.OpenFile(fullFilePath)
 	if err != nil {
 		return err
 	}
@@ -163,10 +151,10 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	}
 
 	thumbnailFilename := h.getThumbnailFilename(tp)
-	thumbnailFullFilename := h.makeFullFilePath(thumbnailFilename)
+	thumbnailfullFilePath := h.makeFullFilePath(thumbnailFilename)
 
 	// update the deps file
-	err = h.updateDepsFile(fullFilename, thumbnailFullFilename)
+	err = h.updateDepsFile(fullFilePath, thumbnailfullFilePath)
 	if err != nil {
 		return err
 	}
@@ -180,7 +168,7 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 		return errs.ErrBadEncryptionSecret
 	}
 
-	err = os.WriteFile(thumbnailFullFilename, thumbData, 0600)
+	err = os.WriteFile(thumbnailfullFilePath, thumbData, 0600)
 	if err != nil {
 		return err
 	}
@@ -188,9 +176,9 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	return nil
 }
 
-func (h *Handler) deleteDepFiles(fullFilename string) error {
-	depFullFilename := fmt.Sprintf("%s_deps", fullFilename)
-	depFile, err := os.Open(depFullFilename)
+func (h *Handler) deleteDepFiles(fullFilePath string) error {
+	depfullFilePath := fmt.Sprintf("%s_deps", fullFilePath)
+	depFile, err := os.Open(depfullFilePath)
 	if err != nil {
 		return nil
 	}
@@ -207,7 +195,7 @@ func (h *Handler) deleteDepFiles(fullFilename string) error {
 		return err
 	}
 
-	err = os.Remove(depFullFilename)
+	err = os.Remove(depfullFilePath)
 	if err != nil {
 		return nil
 	}
@@ -217,17 +205,20 @@ func (h *Handler) deleteDepFiles(fullFilename string) error {
 
 func (h *Handler) tryDecryptFile(fileData *[]byte, encryptionSecret string) error {
 	var err error
+	fileDataCopy := []byte{}
 	if encryptionSecret != "" {
-		*fileData, err = helper.Decrypt(*fileData, encryptionSecret)
+		fileDataCopy, err = helper.Decrypt(*fileData, encryptionSecret)
 		if err != nil {
 			return errs.ErrBadEncryptionSecret
 		}
 	}
 
-	contentType := http.DetectContentType(*fileData)
+	contentType := http.DetectContentType(fileDataCopy)
 	if !helper.IsSupportedContentType(contentType) {
 		return errs.ErrBadEncryptionSecret
 	}
+
+	*fileData = fileDataCopy
 
 	return nil
 }
@@ -331,8 +322,8 @@ func (h *Handler) makeTokenUrl(token string) string {
 	return fmt.Sprintf("%s/links/%s", h.BaseUrl, token)
 }
 
-func (h *Handler) updateDepsFile(fullFilename, thumbnailFullFilename string) error {
-	depsFilename := fmt.Sprintf("%s_deps", fullFilename)
+func (h *Handler) updateDepsFile(fullFilePath, thumbnailfullFilePath string) error {
+	depsFilename := fmt.Sprintf("%s_deps", fullFilePath)
 	depsFile, err := os.OpenFile(depsFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		err = os.WriteFile(depsFilename, []byte{}, 0600)
@@ -346,7 +337,7 @@ func (h *Handler) updateDepsFile(fullFilename, thumbnailFullFilename string) err
 	}
 	defer depsFile.Close()
 
-	_, err = depsFile.WriteString(thumbnailFullFilename + "\n")
+	_, err = depsFile.WriteString(thumbnailfullFilePath + "\n")
 	if err != nil {
 		return err
 	}

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -40,23 +39,23 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 	filename, err := request.ParseFilenameFromUrl(r)
 	if err != nil {
 		response.SendBadRequest(w, "filename")
+		return
 	}
+
+	// encryption-secret
+	encryptionSecret := request.ParseEncryptionSecretFromQuery(r)
+	fmt.Println(encryptionSecret)
 
 	// open file
 	filename = h.getProperFilename(filename)
-	fullFileName := h.makeFullFilePath(filename)
-	file, err := os.Open(fullFileName)
+	fullFilePath := h.makeFullFilePath(filename)
+	fileData, err := helper.OpenFile(fullFilePath)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return
 	}
-	defer file.Close()
 
-	fileData, err := ioutil.ReadAll(file)
-	if err != nil {
-		response.SendError(w, 500, "Couldn't read file data.", err)
-		return
-	}
+	_ = h.tryDecryptFile(&fileData, encryptionSecret)
 
 	response.SendImage(w, fileData, nil)
 }
@@ -103,26 +102,22 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fullFilename := h.makeFullFilePath(filename)
+	fullFilePath := h.makeFullFilePath(filename)
 
 	// delete files from dep file including itself
-	err = h.deleteDepFiles(fullFilename)
+	err = h.deleteDepFiles(fullFilePath)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't delete dependency files.", err)
 		return
 	}
 
-	// encrypt file
-	if encryptionSecret != "" {
-		fileData, err = helper.Encrypt(fileData, encryptionSecret)
-		if err != nil {
-			response.SendError(w, 500, "Couldn't encrypt file.", err)
-			return
-		}
+	if h.tryEncryptFile(&fileData, encryptionSecret) != nil {
+		response.SendError(w, 500, "Couldn't encrypt file.", err)
+		return
 	}
 
 	// write file
-	err = os.WriteFile(fullFilename, fileData, 0600)
+	err = os.WriteFile(fullFilePath, fileData, 0600)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't write file.", err)
 		return

@@ -14,19 +14,19 @@ import (
 
 type LinkRequest struct {
 	Filename         string `json:"filename"`
-	EncryptionSecret string `json:"encryptionSecret"`
+	EncryptionSecret string `json:"secret"`
 }
 
 type ThumbnailRequest struct {
 	Resolution       int    `json:"resolution"`
 	Filename         string `json:"filename"`
-	EncryptionSecret string `json:"encryptionSecret"`
+	EncryptionSecret string `json:"secret"`
 }
 
 type ThumbnailsRequest struct {
 	Resolution       int      `json:"resolution"`
 	Filenames        []string `json:"filenames"`
-	EncryptionSecret string   `json:"encryptionSecret"`
+	EncryptionSecret string   `json:"secret"`
 }
 
 func ParseJson(r *http.Request, obj interface{}) error {
@@ -90,7 +90,12 @@ func ParseFilename(r *http.Request) (string, error) {
 }
 
 func ParseEncryptionSecret(r *http.Request) string {
-	encryptionSecret := r.FormValue("encryption-secret")
+	encryptionSecret := r.FormValue("secret")
+	return encryptionSecret
+}
+
+func ParseEncryptionSecretFromQuery(r *http.Request) string {
+	encryptionSecret := r.URL.Query().Get("secret")
 	return encryptionSecret
 }
 
