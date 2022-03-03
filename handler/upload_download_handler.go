@@ -44,7 +44,6 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 
 	// encryption-secret
 	encryptionSecret := request.ParseEncryptionSecretFromQuery(r)
-	fmt.Println(encryptionSecret)
 
 	// open file
 	filename = h.getProperFilename(filename)
