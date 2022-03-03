@@ -204,6 +204,10 @@ func (h *Handler) deleteDepFiles(fullFilePath string) error {
 }
 
 func (h *Handler) tryDecryptFile(fileData *[]byte, encryptionSecret string) error {
+	if encryptionSecret == "" {
+		return nil
+	}
+
 	var err error
 	fileDataCopy := []byte{}
 	if encryptionSecret != "" {
@@ -224,6 +228,10 @@ func (h *Handler) tryDecryptFile(fileData *[]byte, encryptionSecret string) erro
 }
 
 func (h *Handler) tryEncryptFile(fileData *[]byte, encryptionSecret string) error {
+	if encryptionSecret == "" {
+		return nil
+	}
+
 	var err error
 	if encryptionSecret != "" {
 		*fileData, err = helper.Encrypt(*fileData, encryptionSecret)
