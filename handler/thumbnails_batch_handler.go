@@ -43,13 +43,13 @@ func (h *Handler) createThumbnailLinks(w http.ResponseWriter, r *http.Request) {
 
 	filenameToUrls := make(map[string]string)
 	for _, filename := range req.Filenames {
-		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square}
+		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square, req.EncryptionSecret}
 		thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 		if err != nil {
 			continue
 		}
 
-		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt)
+		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret)
 		if err != nil {
 			response.SendError(w, 500, "Couldn't create token.", err)
 			return

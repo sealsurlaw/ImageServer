@@ -3,6 +3,7 @@ package request
 import (
 	"encoding/json"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,17 +13,20 @@ import (
 )
 
 type LinkRequest struct {
-	Filename string `json:"filename"`
+	Filename         string `json:"filename"`
+	EncryptionSecret string `json:"encryptionSecret"`
 }
 
 type ThumbnailRequest struct {
-	Resolution int    `json:"resolution"`
-	Filename   string `json:"filename"`
+	Resolution       int    `json:"resolution"`
+	Filename         string `json:"filename"`
+	EncryptionSecret string `json:"encryptionSecret"`
 }
 
 type ThumbnailsRequest struct {
-	Resolution int      `json:"resolution"`
-	Filenames  []string `json:"filenames"`
+	Resolution       int      `json:"resolution"`
+	Filenames        []string `json:"filenames"`
+	EncryptionSecret string   `json:"encryptionSecret"`
 }
 
 func ParseJson(r *http.Request, obj interface{}) error {
@@ -60,6 +64,22 @@ func ParseExpires(r *http.Request) *time.Time {
 	return &expiresAt
 }
 
+func ParseFile(r *http.Request) ([]byte, error) {
+	r.ParseMultipartForm(math.MaxInt64)
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	fileData, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
+}
+
 func ParseFilename(r *http.Request) (string, error) {
 	filename := r.FormValue("filename")
 	if filename == "" {
@@ -67,6 +87,11 @@ func ParseFilename(r *http.Request) (string, error) {
 	}
 
 	return filename, nil
+}
+
+func ParseEncryptionSecret(r *http.Request) string {
+	encryptionSecret := r.FormValue("encryption-secret")
+	return encryptionSecret
 }
 
 func ParseFilenameFromUrl(r *http.Request) (string, error) {

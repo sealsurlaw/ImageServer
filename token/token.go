@@ -1,15 +1,12 @@
 package token
 
 import (
-	"bytes"
-	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"io"
 	"time"
+
+	"github.com/sealsurlaw/gouvre/helper"
 )
 
 type Tokenizer struct {
@@ -17,18 +14,13 @@ type Tokenizer struct {
 }
 
 type TokenData struct {
-	ExpiresAt int64  `json:"exp"`
-	Filename  string `json:"fnm"`
+	Filename         string `json:"f"`
+	ExpiresAt        int64  `json:"e,omitempty"`
+	EncryptionSecret string `json:"s,omitempty"`
 }
 
 func NewTokenizer(encryptionSecret string) (*Tokenizer, error) {
-	key := sha256.Sum256([]byte(encryptionSecret))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return nil, err
-	}
-
-	aesgcm, err := cipher.NewGCM(block)
+	aesgcm, err := helper.MakeCipher(encryptionSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -38,53 +30,51 @@ func NewTokenizer(encryptionSecret string) (*Tokenizer, error) {
 	}, nil
 }
 
-func (t *Tokenizer) CreateToken(filename string, expiresAt *time.Time) (string, error) {
+func (t *Tokenizer) CreateToken(
+	filename string,
+	expiresAt *time.Time,
+	encryptionSecret string,
+) (string, error) {
 	tokenData := TokenData{
-		Filename:  filename,
-		ExpiresAt: expiresAt.Unix(),
+		Filename:         filename,
+		EncryptionSecret: encryptionSecret,
+	}
+	if expiresAt != nil {
+		tokenData.ExpiresAt = expiresAt.Unix()
 	}
 	tokenBytes := dataToJsonBytes(&tokenData)
 
-	nonce := t.makeNonce()
+	nonce := helper.MakeNonce()
 	encryptedBytes := t.aesgcm.Seal(nil, nonce, tokenBytes, nil)
-	encryptedBytes = joinTokenBytes(nonce, encryptedBytes)
+	encryptedBytes = helper.JoinBytes(nonce, encryptedBytes)
 	encryptedStr := base64.RawURLEncoding.EncodeToString(encryptedBytes)
 
 	return encryptedStr, nil
 }
 
-func (t *Tokenizer) ParseToken(token string) (filename string, expiresAt *time.Time, err error) {
+func (t *Tokenizer) ParseToken(
+	token string,
+) (filename string, expiresAt *time.Time, encryptionSecret string, err error) {
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 
-	nonce, tokenBytes := t.splitTokenBytes(tokenBytes)
+	nonce, tokenBytes := helper.SplitJoinedBytes(tokenBytes)
 
 	decryptedBytes, err := t.aesgcm.Open(nil, nonce, tokenBytes, nil)
 	if err != nil {
-		return "", nil, err
+		return "", nil, "", err
 	}
 
 	tokenData := jsonBytesToData(decryptedBytes)
 
-	expires := time.Unix(tokenData.ExpiresAt, 0)
+	var expires time.Time
+	if tokenData.ExpiresAt != 0 {
+		expires = time.Unix(tokenData.ExpiresAt, 0)
+	}
 
-	return tokenData.Filename, &expires, nil
-}
-
-func (t *Tokenizer) makeNonce() []byte {
-	nonce := make([]byte, t.aesgcm.NonceSize())
-	io.ReadFull(rand.Reader, nonce)
-	return nonce
-}
-
-func (t *Tokenizer) splitTokenBytes(tokenBytes []byte) (nonce []byte, token []byte) {
-	return tokenBytes[:t.aesgcm.NonceSize()], tokenBytes[t.aesgcm.NonceSize():]
-}
-
-func joinTokenBytes(nonce []byte, tokenBytes []byte) []byte {
-	return bytes.Join([][]byte{nonce, tokenBytes}, []byte{})
+	return tokenData.Filename, &expires, tokenData.EncryptionSecret, nil
 }
 
 func dataToJsonBytes(tokenData *TokenData) []byte {

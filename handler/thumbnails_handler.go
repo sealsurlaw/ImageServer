@@ -9,9 +9,10 @@ import (
 )
 
 type ThumbnailParameters struct {
-	Filename   string
-	Resolution int
-	Cropped    bool
+	Filename         string
+	Resolution       int
+	Cropped          bool
+	EncryptionSecret string
 }
 
 func (h *Handler) Thumbnails(w http.ResponseWriter, r *http.Request) {
@@ -47,14 +48,14 @@ func (h *Handler) getThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	square := request.ParseSquare(r)
 	expiresAt := request.ParseExpires(r)
 
-	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square}
+	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square, req.EncryptionSecret}
 	thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
 		return
 	}
 
-	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt)
+	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return

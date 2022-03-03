@@ -7,6 +7,8 @@ import (
 
 var ErrCannotConnectDatabase = fmt.Errorf("Cannot connect to the database.")
 
+var ErrBadEncryptionSecret = fmt.Errorf("Bad encryption secret.")
+
 var ErrTokenAlreadyExists = fmt.Errorf("Token already exists.")
 
 var ErrInvalidContentType = fmt.Errorf("Invalid content type.")

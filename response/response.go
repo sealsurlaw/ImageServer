@@ -3,9 +3,7 @@ package response
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -38,12 +36,7 @@ func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 	w.Write(j)
 }
 
-func SendImage(w http.ResponseWriter, file *os.File, expiresAt *time.Time) {
-	fileData, err := ioutil.ReadAll(file)
-	if err != nil {
-		fmt.Println(err)
-	}
-
+func SendImage(w http.ResponseWriter, fileData []byte, expiresAt *time.Time) {
 	if expiresAt != nil {
 		cacheControl := fmt.Sprintf("public, max-age=%d", int(expiresAt.Sub(time.Now()).Seconds()))
 		w.Header().Add("Cache-Control", cacheControl)

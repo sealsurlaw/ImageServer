@@ -3,7 +3,6 @@ package handler
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"os"
 
@@ -53,7 +52,13 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	response.SendImage(w, file, nil)
+	fileData, err := ioutil.ReadAll(file)
+	if err != nil {
+		response.SendError(w, 500, "Couldn't read file data.", err)
+		return
+	}
+
+	response.SendImage(w, fileData, nil)
 }
 
 func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
@@ -68,31 +73,26 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	filename := r.FormValue("filename")
+	filename, err := request.ParseFilename(r)
 	if filename == "" {
 		response.SendBadRequest(w, "filename")
 		return
 	}
-	filename = h.getProperFilename(filename)
+
+	// encryption-secret - optional
+	encryptionSecret := request.ParseEncryptionSecret(r)
 
 	// file
-	r.ParseMultipartForm(math.MaxInt64)
-	file, _, err := r.FormFile("file")
+	fileData, err := request.ParseFile(r)
 	if err != nil {
-		response.SendError(w, 400, "Error getting file.", err)
+		response.SendError(w, 500, "Could not parse file", err)
 		return
 	}
-	defer file.Close()
 
+	filename = h.getProperFilename(filename)
 	err = h.createDirectories(filename)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create directories.", err)
-		return
-	}
-
-	fileData, err := ioutil.ReadAll(file)
-	if err != nil {
-		response.SendError(w, 400, "Couldn't parse file.", err)
 		return
 	}
 
@@ -110,6 +110,15 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		response.SendError(w, 500, "Couldn't delete dependency files.", err)
 		return
+	}
+
+	// encrypt file
+	if encryptionSecret != "" {
+		fileData, err = helper.Encrypt(fileData, encryptionSecret)
+		if err != nil {
+			response.SendError(w, 500, "Couldn't encrypt file.", err)
+			return
+		}
 	}
 
 	// write file

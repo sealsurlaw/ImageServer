@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/helper"
 	"github.com/sealsurlaw/gouvre/request"
 	"github.com/sealsurlaw/gouvre/response"
 )
@@ -51,7 +53,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.tokenizer.CreateToken(filename, expiresAt)
+	token, err := h.tokenizer.CreateToken(filename, expiresAt, req.EncryptionSecret)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return
@@ -70,7 +72,7 @@ func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "token")
 	}
 
-	filename, expiresAt, err := h.tokenizer.ParseToken(token)
+	filename, expiresAt, encryptionSecret, err := h.tokenizer.ParseToken(token)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return
@@ -90,5 +92,19 @@ func (h *Handler) getImageFromToken(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	response.SendImage(w, file, expiresAt)
+	fileData, err := ioutil.ReadAll(file)
+	if err != nil {
+		response.SendError(w, 500, "Couldn't read file data.", err)
+		return
+	}
+
+	if encryptionSecret != "" {
+		fileData, err = helper.Decrypt(fileData, encryptionSecret)
+		if err != nil {
+			response.SendError(w, 500, "Couldn't decrypt file.", err)
+			return
+		}
+	}
+
+	response.SendImage(w, fileData, expiresAt)
 }

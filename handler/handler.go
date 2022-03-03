@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/sealsurlaw/gouvre/config"
+	"github.com/sealsurlaw/gouvre/errs"
 	"github.com/sealsurlaw/gouvre/helper"
 	"github.com/sealsurlaw/gouvre/token"
 )
@@ -96,9 +97,15 @@ func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, e
 			return "", err
 		}
 	}
-	err = file.Close()
+	defer file.Close()
+
+	fileData, err := ioutil.ReadAll(file)
 	if err != nil {
 		return "", err
+	}
+
+	if h.tryDecryptFile(&fileData, tp.EncryptionSecret) != nil {
+		return "", errs.ErrBadEncryptionSecret
 	}
 
 	return thumbnailFilename, nil
@@ -135,9 +142,18 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 	}
 	defer file.Close()
 
+	fileData, err := ioutil.ReadAll(file)
+	if err != nil {
+		return err
+	}
+
+	if h.tryDecryptFile(&fileData, tp.EncryptionSecret) != nil {
+		return errs.ErrBadEncryptionSecret
+	}
+
 	// create thumbnail
-	thumbFile, err := helper.CreateThumbnail(
-		file,
+	thumbData, err := helper.CreateThumbnail(
+		fileData,
 		tp.Resolution,
 		tp.Cropped,
 		h.thumbnailQuality,
@@ -155,17 +171,16 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 		return err
 	}
 
-	// write file
-	fileData, err := ioutil.ReadAll(thumbFile)
-	if err != nil {
-		return err
-	}
-
 	err = h.createDirectories(thumbnailFilename)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(thumbnailFullFilename, fileData, 0600)
+
+	if h.tryEncryptFile(&thumbData, tp.EncryptionSecret) != nil {
+		return errs.ErrBadEncryptionSecret
+	}
+
+	err = os.WriteFile(thumbnailFullFilename, thumbData, 0600)
 	if err != nil {
 		return err
 	}
@@ -197,6 +212,34 @@ func (h *Handler) deleteDepFiles(fullFilename string) error {
 		return nil
 	}
 
+	return nil
+}
+
+func (h *Handler) tryDecryptFile(fileData *[]byte, encryptionSecret string) error {
+	var err error
+	if encryptionSecret != "" {
+		*fileData, err = helper.Decrypt(*fileData, encryptionSecret)
+		if err != nil {
+			return errs.ErrBadEncryptionSecret
+		}
+	}
+
+	contentType := http.DetectContentType(*fileData)
+	if !helper.IsSupportedContentType(contentType) {
+		return errs.ErrBadEncryptionSecret
+	}
+
+	return nil
+}
+
+func (h *Handler) tryEncryptFile(fileData *[]byte, encryptionSecret string) error {
+	var err error
+	if encryptionSecret != "" {
+		*fileData, err = helper.Encrypt(*fileData, encryptionSecret)
+		if err != nil {
+			return errs.ErrBadEncryptionSecret
+		}
+	}
 	return nil
 }
 

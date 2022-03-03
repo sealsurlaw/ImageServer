@@ -8,12 +8,10 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
-	"io"
 	"io/ioutil"
 	"math"
 	"net"
 	"net/http"
-	"os"
 
 	"github.com/sealsurlaw/gouvre/errs"
 	"golang.org/x/image/bmp"
@@ -25,11 +23,7 @@ func CalculateHash(str string) string {
 	return base64.URLEncoding.EncodeToString(s[:])
 }
 
-func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (io.Reader, error) {
-	fileData, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
+func CreateThumbnail(fileData []byte, resolution int, cropped bool, quality int) ([]byte, error) {
 	contentType := http.DetectContentType(fileData)
 
 	r := bytes.NewReader(fileData)
@@ -53,7 +47,12 @@ func CreateThumbnail(file *os.File, resolution int, cropped bool, quality int) (
 		return nil, err
 	}
 
-	return buf, nil
+	thumbData, err := ioutil.ReadAll(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return thumbData, nil
 }
 
 func GetIpAddress(r *http.Request) string {
