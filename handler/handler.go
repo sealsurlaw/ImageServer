@@ -24,6 +24,7 @@ type Handler struct {
 	hashFilename           bool
 	whitelistedTokens      []string
 	whitelistedIpAddresses []string
+	singleUseUploadTokens  map[string]bool
 }
 
 func NewHandler(cfg *config.Config) *Handler {
@@ -39,6 +40,7 @@ func NewHandler(cfg *config.Config) *Handler {
 		hashFilename:           cfg.HashFilename,
 		whitelistedTokens:      cfg.WhitelistedTokens,
 		whitelistedIpAddresses: cfg.WhitelistedIpAddresses,
+		singleUseUploadTokens:  make(map[string]bool),
 	}
 }
 
@@ -217,11 +219,6 @@ func (h *Handler) tryDecryptFile(fileData *[]byte, encryptionSecret string) erro
 		}
 	}
 
-	contentType := http.DetectContentType(fileDataCopy)
-	if !helper.IsSupportedContentType(contentType) {
-		return errs.ErrBadEncryptionSecret
-	}
-
 	*fileData = fileDataCopy
 
 	return nil
@@ -330,6 +327,10 @@ func (h *Handler) makeTokenUrl(token string) string {
 	return fmt.Sprintf("%s/links/%s", h.BaseUrl, token)
 }
 
+func (h *Handler) makeUploadTokenUrl(token string) string {
+	return fmt.Sprintf("%s/uploads/%s", h.BaseUrl, token)
+}
+
 func (h *Handler) updateDepsFile(fullFilePath, thumbnailfullFilePath string) error {
 	depsFilename := fmt.Sprintf("%s_deps", fullFilePath)
 	depsFile, err := os.OpenFile(depsFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
@@ -346,6 +347,40 @@ func (h *Handler) updateDepsFile(fullFilePath, thumbnailfullFilePath string) err
 	defer depsFile.Close()
 
 	_, err = depsFile.WriteString(thumbnailfullFilePath + "\n")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *Handler) writeFile(fileData []byte, filename string, encryptionSecret string) error {
+	filename = h.getProperFilename(filename)
+	err := h.createDirectories(filename)
+	if err != nil {
+		return err
+	}
+
+	contentType := http.DetectContentType(fileData)
+	if !helper.IsSupportedContentType(contentType) {
+		msg := fmt.Sprintf("Content type %s not supported.", contentType)
+		return fmt.Errorf(msg)
+	}
+
+	fullFilePath := h.makeFullFilePath(filename)
+
+	// delete files from dep file including itself
+	err = h.deleteDepFiles(fullFilePath)
+	if err != nil {
+		return err
+	}
+
+	if h.tryEncryptFile(&fileData, encryptionSecret) != nil {
+		return err
+	}
+
+	// write file
+	err = os.WriteFile(fullFilePath, fileData, 0600)
 	if err != nil {
 		return err
 	}

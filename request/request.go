@@ -3,7 +3,6 @@ package request
 import (
 	"encoding/json"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -65,7 +64,6 @@ func ParseExpires(r *http.Request) *time.Time {
 }
 
 func ParseFile(r *http.Request) ([]byte, error) {
-	r.ParseMultipartForm(math.MaxInt64)
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		return nil, err

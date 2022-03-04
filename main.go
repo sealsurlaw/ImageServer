@@ -16,12 +16,14 @@ func main() {
 	h := handler.NewHandler(cfg)
 
 	handle("/ping", h.Ping)
-	handle("/links/", h.Links)
-	handle("/links", h.Links)
-	handle("/images/", h.UploadDownload)
-	handle("/images", h.UploadDownload)
-	handle("/thumbnails/batch", h.ThumbnailsBatch)
-	handle("/thumbnails", h.Thumbnails)
+	handle("/links/thumbnails/batch", h.CreateBatchThumbnailLinks)
+	handle("/links/thumbnails", h.CreateThumbnailLink)
+	handle("/links/upload", h.CreateUploadLink)
+	handle("/uploads/", h.UploadFileWithLink)
+	handle("/uploads", h.UploadFile)
+	handle("/images/", h.DownloadFile)
+	handle("/links/", h.GetImageFromTokenLink)
+	handle("/links", h.CreateLink)
 
 	handle("/", func(w http.ResponseWriter, r *http.Request) {
 		response.SendMethodNotFound(w)
@@ -39,5 +41,6 @@ func handle(pattern string, handler http.HandlerFunc) {
 }
 
 func middleware(next http.HandlerFunc) http.Handler {
-	return middle.LogRoutes(next)
+	m := middle.LogRoutes(next)
+	return m
 }

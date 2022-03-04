@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/sealsurlaw/gouvre/errs"
 	"github.com/sealsurlaw/gouvre/helper"
 )
 
@@ -72,6 +73,10 @@ func (t *Tokenizer) ParseToken(
 	var expires time.Time
 	if tokenData.ExpiresAt != 0 {
 		expires = time.Unix(tokenData.ExpiresAt, 0)
+	}
+
+	if time.Now().After(expires) {
+		return "", nil, "", errs.ErrTokenExpired
 	}
 
 	return tokenData.Filename, &expires, tokenData.EncryptionSecret, nil
