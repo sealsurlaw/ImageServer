@@ -58,14 +58,14 @@ func (h *Handler) createThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	square := request.ParseSquare(r)
 	expiresAt := request.ParseExpires(r)
 
-	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square, req.EncryptionSecret}
+	thumbnailParameters := &ThumbnailParameters{req.Filename, req.Resolution, square, req.Secret}
 	thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
 		return
 	}
 
-	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret, nil)
+	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.Secret, nil)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return
@@ -89,7 +89,7 @@ func (h *Handler) createBatchThumbnailLinks(w http.ResponseWriter, r *http.Reque
 	}
 
 	// request json
-	req := request.CreatBatchThumbnailLinksRequest{}
+	req := request.CreateBatchThumbnailLinksRequest{}
 	err := request.ParseJson(r, &req)
 	if err != nil {
 		response.SendError(w, 400, "Could not parse json request.", err)
@@ -102,13 +102,13 @@ func (h *Handler) createBatchThumbnailLinks(w http.ResponseWriter, r *http.Reque
 
 	filenameToUrls := make(map[string]string)
 	for _, filename := range req.Filenames {
-		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square, req.EncryptionSecret}
+		thumbnailParameters := &ThumbnailParameters{filename, req.Resolution, square, req.Secret}
 		thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 		if err != nil {
 			continue
 		}
 
-		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret, nil)
+		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.Secret, nil)
 		if err != nil {
 			response.SendError(w, 500, "Couldn't create token.", err)
 			return

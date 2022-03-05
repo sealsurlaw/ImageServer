@@ -12,26 +12,26 @@ import (
 )
 
 type CreateLinkRequest struct {
-	Filename         string `json:"filename"`
-	EncryptionSecret string `json:"secret"`
+	Filename string `json:"filename"`
+	Secret   string `json:"secret"`
 }
 
 type CreateUploadLinkRequest struct {
-	Filename         string `json:"filename"`
-	EncryptionSecret string `json:"secret"`
-	Resolutions      []int  `json:"resolutions"`
+	Filename    string `json:"filename"`
+	Secret      string `json:"secret"`
+	Resolutions []int  `json:"resolutions"`
 }
 
 type CreateThumbnailLinkRequest struct {
-	Resolution       int    `json:"resolution"`
-	Filename         string `json:"filename"`
-	EncryptionSecret string `json:"secret"`
+	Resolution int    `json:"resolution"`
+	Filename   string `json:"filename"`
+	Secret     string `json:"secret"`
 }
 
-type CreatBatchThumbnailLinksRequest struct {
-	Resolution       int      `json:"resolution"`
-	Filenames        []string `json:"filenames"`
-	EncryptionSecret string   `json:"secret"`
+type CreateBatchThumbnailLinksRequest struct {
+	Resolution int      `json:"resolution"`
+	Filenames  []string `json:"filenames"`
+	Secret     string   `json:"secret"`
 }
 
 func ParseJson(r *http.Request, obj interface{}) error {
