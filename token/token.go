@@ -18,6 +18,7 @@ type TokenData struct {
 	Filename         string `json:"f"`
 	ExpiresAt        int64  `json:"e,omitempty"`
 	EncryptionSecret string `json:"s,omitempty"`
+	Resolutions      []int  `json:"r,omitempty"`
 }
 
 func NewTokenizer(encryptionSecret string) (*Tokenizer, error) {
@@ -35,6 +36,7 @@ func (t *Tokenizer) CreateToken(
 	filename string,
 	expiresAt *time.Time,
 	encryptionSecret string,
+	resolutions []int,
 ) (string, error) {
 	tokenData := TokenData{
 		Filename:         filename,
@@ -42,6 +44,9 @@ func (t *Tokenizer) CreateToken(
 	}
 	if expiresAt != nil {
 		tokenData.ExpiresAt = expiresAt.Unix()
+	}
+	if resolutions != nil {
+		tokenData.Resolutions = resolutions
 	}
 	tokenBytes := dataToJsonBytes(&tokenData)
 
@@ -55,17 +60,17 @@ func (t *Tokenizer) CreateToken(
 
 func (t *Tokenizer) ParseToken(
 	token string,
-) (filename string, expiresAt *time.Time, encryptionSecret string, err error) {
+) (filename string, expiresAt *time.Time, encryptionSecret string, resolutions []int, err error) {
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(token)
 	if err != nil {
-		return "", nil, "", err
+		return "", nil, "", nil, err
 	}
 
 	nonce, tokenBytes := helper.SplitJoinedBytes(tokenBytes)
 
 	decryptedBytes, err := t.aesgcm.Open(nil, nonce, tokenBytes, nil)
 	if err != nil {
-		return "", nil, "", err
+		return "", nil, "", nil, err
 	}
 
 	tokenData := jsonBytesToData(decryptedBytes)
@@ -76,10 +81,15 @@ func (t *Tokenizer) ParseToken(
 	}
 
 	if time.Now().After(expires) {
-		return "", nil, "", errs.ErrTokenExpired
+		return "", nil, "", nil, errs.ErrTokenExpired
 	}
 
-	return tokenData.Filename, &expires, tokenData.EncryptionSecret, nil
+	resolutions = []int{}
+	if tokenData.Resolutions != nil {
+		resolutions = tokenData.Resolutions
+	}
+
+	return tokenData.Filename, &expires, tokenData.EncryptionSecret, resolutions, nil
 }
 
 func dataToJsonBytes(tokenData *TokenData) []byte {

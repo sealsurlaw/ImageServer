@@ -11,18 +11,24 @@ import (
 	"github.com/sealsurlaw/gouvre/errs"
 )
 
-type LinkRequest struct {
+type CreateLinkRequest struct {
 	Filename         string `json:"filename"`
 	EncryptionSecret string `json:"secret"`
 }
 
-type ThumbnailRequest struct {
+type CreateUploadLinkRequest struct {
+	Filename         string `json:"filename"`
+	EncryptionSecret string `json:"secret"`
+	Resolutions      []int  `json:"resolutions"`
+}
+
+type CreateThumbnailLinkRequest struct {
 	Resolution       int    `json:"resolution"`
 	Filename         string `json:"filename"`
 	EncryptionSecret string `json:"secret"`
 }
 
-type ThumbnailsRequest struct {
+type CreatBatchThumbnailLinksRequest struct {
 	Resolution       int      `json:"resolution"`
 	Filenames        []string `json:"filenames"`
 	EncryptionSecret string   `json:"secret"`

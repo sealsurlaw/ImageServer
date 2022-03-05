@@ -78,7 +78,7 @@ func (h *Handler) uploadFileWithLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	filename, _, encryptionSecret, err := h.tokenizer.ParseToken(token)
+	filename, _, encryptionSecret, resolutions, err := h.tokenizer.ParseToken(token)
 	if filename == "" || err != nil {
 		response.SendInvalidAuthToken(w)
 		return
@@ -100,6 +100,22 @@ func (h *Handler) uploadFileWithLink(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		response.SendError(w, 500, "Could not write file", err)
 		return
+	}
+
+	for _, resolution := range resolutions {
+		// not square
+		thumbnailParameters := &ThumbnailParameters{filename, resolution, false, encryptionSecret}
+		_, err = h.checkOrCreateThumbnailFile(thumbnailParameters)
+		if err != nil {
+			continue
+		}
+
+		// square
+		thumbnailParameters = &ThumbnailParameters{filename, resolution, true, encryptionSecret}
+		_, err = h.checkOrCreateThumbnailFile(thumbnailParameters)
+		if err != nil {
+			continue
+		}
 	}
 
 	delete(h.singleUseUploadTokens, token)

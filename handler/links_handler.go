@@ -51,7 +51,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	req := request.LinkRequest{}
+	req := request.CreateLinkRequest{}
 	err := request.ParseJson(r, &req)
 	if err != nil {
 		response.SendError(w, 400, "Could not parse json request.", err)
@@ -67,7 +67,7 @@ func (h *Handler) createLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.tokenizer.CreateToken(filename, expiresAt, req.EncryptionSecret)
+	token, err := h.tokenizer.CreateToken(filename, expiresAt, req.EncryptionSecret, nil)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return
@@ -91,7 +91,7 @@ func (h *Handler) createUploadLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	req := request.LinkRequest{}
+	req := request.CreateUploadLinkRequest{}
 	err := request.ParseJson(r, &req)
 	if err != nil {
 		response.SendError(w, 400, "Could not parse json request.", err)
@@ -101,7 +101,7 @@ func (h *Handler) createUploadLink(w http.ResponseWriter, r *http.Request) {
 	// optional queries
 	expiresAt := request.ParseExpires(r)
 
-	token, err := h.tokenizer.CreateToken(req.Filename, expiresAt, req.EncryptionSecret)
+	token, err := h.tokenizer.CreateToken(req.Filename, expiresAt, req.EncryptionSecret, req.Resolutions)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return
@@ -122,9 +122,9 @@ func (h *Handler) getImageFromTokenLink(w http.ResponseWriter, r *http.Request) 
 		response.SendBadRequest(w, "token")
 	}
 
-	filename, expiresAt, encryptionSecret, err := h.tokenizer.ParseToken(token)
+	filename, expiresAt, encryptionSecret, _, err := h.tokenizer.ParseToken(token)
 	if err != nil {
-		response.SendError(w, 500, "Couldn't create token.", err)
+		response.SendError(w, 500, "Couldn't parse token.", err)
 		return
 	}
 

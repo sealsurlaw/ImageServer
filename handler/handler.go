@@ -86,7 +86,7 @@ func (h *Handler) checkOrCreateThumbnailFile(tp *ThumbnailParameters) (string, e
 	// open file to make sure it exists
 	thumbnailFilename := h.getThumbnailFilename(tp)
 	thumbnailfullFilePath := h.makeFullFilePath(thumbnailFilename)
-	fileData, err := helper.OpenFile(thumbnailFilename)
+	fileData, err := helper.OpenFile(thumbnailfullFilePath)
 	if err != nil {
 		// if not found, attempt to make it
 		err = h.createThumbnail(tp)

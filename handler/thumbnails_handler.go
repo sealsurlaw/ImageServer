@@ -47,7 +47,7 @@ func (h *Handler) createThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// request json
-	req := request.ThumbnailRequest{}
+	req := request.CreateThumbnailLinkRequest{}
 	err := request.ParseJson(r, &req)
 	if err != nil {
 		response.SendError(w, 400, "Could not parse json request.", err)
@@ -65,7 +65,7 @@ func (h *Handler) createThumbnailLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret)
+	token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret, nil)
 	if err != nil {
 		response.SendError(w, 500, "Couldn't create token.", err)
 		return
@@ -89,7 +89,7 @@ func (h *Handler) createBatchThumbnailLinks(w http.ResponseWriter, r *http.Reque
 	}
 
 	// request json
-	req := request.ThumbnailsRequest{}
+	req := request.CreatBatchThumbnailLinksRequest{}
 	err := request.ParseJson(r, &req)
 	if err != nil {
 		response.SendError(w, 400, "Could not parse json request.", err)
@@ -108,7 +108,7 @@ func (h *Handler) createBatchThumbnailLinks(w http.ResponseWriter, r *http.Reque
 			continue
 		}
 
-		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret)
+		token, err := h.tokenizer.CreateToken(thumbnailFilename, expiresAt, req.EncryptionSecret, nil)
 		if err != nil {
 			response.SendError(w, 500, "Couldn't create token.", err)
 			return
