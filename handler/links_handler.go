@@ -33,6 +33,14 @@ func (h *Handler) GetImageFromTokenLink(w http.ResponseWriter, r *http.Request) 
 	if r.Method == http.MethodGet {
 		h.getImageFromTokenLink(w, r)
 		return
+	} else if r.Method == http.MethodPost {
+		h.getImageFromTokenLink(w, r)
+		return
+	} else if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.WriteHeader(http.StatusNoContent)
 	} else {
 		response.SendMethodNotFound(w)
 		return
@@ -129,7 +137,15 @@ func (h *Handler) getImageFromTokenLink(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if secret == "" {
-		secret = request.ParseEncryptionSecretFromQuery(r)
+		if r.Method == http.MethodGet {
+			secret = request.ParseEncryptionSecretFromQuery(r)
+		} else {
+			req := &request.GetImageFromTokenLinkRequest{}
+			err = request.ParseJson(r, &req)
+			if err == nil {
+				secret = req.Secret
+			}
+		}
 	}
 
 	// open file
@@ -143,5 +159,6 @@ func (h *Handler) getImageFromTokenLink(w http.ResponseWriter, r *http.Request) 
 	// if secret is wrong, just return encrypted file
 	_ = h.tryDecryptFile(&fileData, secret)
 
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	response.SendImage(w, fileData, expiresAt)
 }

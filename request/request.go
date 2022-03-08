@@ -11,6 +11,10 @@ import (
 	"github.com/sealsurlaw/gouvre/errs"
 )
 
+type GetImageFromTokenLinkRequest struct {
+	Secret string `json:"secret"`
+}
+
 type CreateLinkRequest struct {
 	Filename string `json:"filename"`
 	Secret   string `json:"secret"`

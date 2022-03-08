@@ -120,5 +120,6 @@ func (h *Handler) uploadFileWithLink(w http.ResponseWriter, r *http.Request) {
 
 	delete(h.singleUseUploadTokens, token)
 
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.WriteHeader(http.StatusCreated)
 }
