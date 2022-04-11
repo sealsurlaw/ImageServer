@@ -5,18 +5,14 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"image"
-	"image/gif"
 	"image/jpeg"
-	"image/png"
 	"io/ioutil"
 	"math"
 	"net"
 	"net/http"
 	"os"
 
-	"github.com/sealsurlaw/gouvre/errs"
-	"golang.org/x/image/bmp"
-	"golang.org/x/image/draw"
+	"github.com/disintegration/imaging"
 )
 
 func CalculateHash(str string) string {
@@ -25,15 +21,13 @@ func CalculateHash(str string) string {
 }
 
 func CreateThumbnail(fileData []byte, resolution int, cropped bool, quality int) ([]byte, error) {
-	contentType := http.DetectContentType(fileData)
-
 	r := bytes.NewReader(fileData)
-	img, err := decodeImage(contentType, r)
+	img, err := imaging.Decode(r, imaging.AutoOrientation(true))
 	if err != nil {
 		return nil, err
 	}
 
-	var thumbImgScaled *image.RGBA
+	var thumbImgScaled *image.NRGBA
 	if cropped {
 		thumbImgScaled = cropAndScale(img, resolution)
 	} else {
@@ -100,58 +94,20 @@ func OpenFile(fullFilePath string) ([]byte, error) {
 	return fileData, nil
 }
 
-func decodeImage(contentType string, r *bytes.Reader) (image.Image, error) {
-	switch contentType {
-	case "image/jpeg":
-		return jpeg.Decode(r)
-	case "image/png":
-		return png.Decode(r)
-	case "image/gif":
-		return gif.Decode(r)
-	case "image/bmp":
-		return bmp.Decode(r)
-	}
-
-	return nil, errs.ErrInvalidContentType
+func cropAndScale(img image.Image, resolution int) *image.NRGBA {
+	return imaging.Fill(img, resolution, resolution, imaging.Center, imaging.Lanczos)
 }
 
-func cropAndScale(img image.Image, resolution int) *image.RGBA {
-	smallestSide := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
-	rect := image.Rect(0, 0, smallestSide, smallestSide)
-	thumbImg := image.NewRGBA(rect)
+func scale(img image.Image, resolution int) *image.NRGBA {
+	newWidth := resolution
 
-	var sp image.Point
-	if img.Bounds().Dx() > img.Bounds().Dy() {
-		x := int((img.Bounds().Dx() - img.Bounds().Dy()) / 2)
-		sp = image.Pt(x, 0)
-	} else {
-		y := int((img.Bounds().Dy() - img.Bounds().Dx()) / 2)
-		sp = image.Pt(0, y)
+	// Height is larger than width
+	if img.Bounds().Dy() > img.Bounds().Dx() {
+		width := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
+		height := int(math.Max(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
+		ratio := float64(width) / float64(height)
+		newWidth = int(float64(resolution) * ratio)
 	}
 
-	draw.Draw(thumbImg, rect, img, sp, draw.Src)
-
-	thumbImgScaled := image.NewRGBA(image.Rect(0, 0, resolution, resolution))
-	draw.BiLinear.Scale(thumbImgScaled, thumbImgScaled.Bounds(), thumbImg, thumbImg.Bounds(), draw.Src, nil)
-	return thumbImgScaled
-}
-
-func scale(img image.Image, resolution int) *image.RGBA {
-	smallestSide := int(math.Min(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
-	largestSide := int(math.Max(float64(img.Bounds().Dx()), float64(img.Bounds().Dy())))
-	ratio := float64(smallestSide) / float64(largestSide)
-
-	largestAfter := resolution
-	smallestAfter := int(float64(largestAfter) * ratio)
-
-	var rect image.Rectangle
-	if img.Bounds().Dy() == largestSide {
-		rect = image.Rect(0, 0, smallestAfter, largestAfter)
-	} else {
-		rect = image.Rect(0, 0, largestAfter, smallestAfter)
-	}
-
-	thumbImgScaled := image.NewRGBA(rect)
-	draw.NearestNeighbor.Scale(thumbImgScaled, thumbImgScaled.Bounds(), img, img.Bounds(), draw.Src, nil)
-	return thumbImgScaled
+	return imaging.Resize(img, newWidth, 0, imaging.Lanczos)
 }
