@@ -35,6 +35,7 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "filename")
 		return
 	}
+	filename = h.getProperFilename(filename)
 
 	// optional queries
 	square := request.ParseSquare(r)
@@ -53,7 +54,6 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// open file
-	filename = h.getProperFilename(filename)
 	fullFilePath := h.makeFullFilePath(filename)
 	fileData, err := helper.OpenFile(fullFilePath)
 	if err != nil {
