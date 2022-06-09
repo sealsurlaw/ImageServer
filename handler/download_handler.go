@@ -35,22 +35,22 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 		response.SendBadRequest(w, "filename")
 		return
 	}
-	filename = h.getProperFilename(filename)
 
 	// optional queries
 	square := request.ParseSquare(r)
-	resoluion := request.ParseResolutionFromQuery(r)
+	resolution := request.ParseResolutionFromQuery(r)
 	encryptionSecret := request.ParseEncryptionSecretFromQuery(r)
 
-	if resoluion != nil {
-		thumbnailParameters := &ThumbnailParameters{filename, *resoluion, square, encryptionSecret}
+	if resolution != nil {
+		thumbnailParameters := &ThumbnailParameters{filename, *resolution, square, encryptionSecret}
 		thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 		if err != nil {
 			response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
 			return
 		}
-
 		filename = thumbnailFilename
+	} else {
+		filename = h.getProperFilename(filename)
 	}
 
 	// open file
