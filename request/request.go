@@ -127,6 +127,17 @@ func ParseResolution(r *http.Request) (int, error) {
 	return resolution, nil
 }
 
+func ParseResolutionFromQuery(r *http.Request) *int {
+	resolution := r.URL.Query().Get("resolution")
+	resolutionInt64, err := strconv.ParseInt(resolution, 10, 32)
+	if err != nil {
+		return nil
+	}
+
+	resolutionInt := int(resolutionInt64)
+	return &resolutionInt
+}
+
 func ParseTokenFromUrl(r *http.Request) (string, error) {
 	pathArr := strings.Split(r.URL.Path, "/")
 	token := pathArr[len(pathArr)-1]
