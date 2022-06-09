@@ -37,10 +37,11 @@ func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 }
 
 func SendImage(w http.ResponseWriter, fileData []byte, expiresAt *time.Time) {
+	cacheControl := "public, max-age=31536000"
 	if expiresAt != nil {
-		cacheControl := fmt.Sprintf("public, max-age=%d", int(expiresAt.Sub(time.Now()).Seconds()))
-		w.Header().Add("Cache-Control", cacheControl)
+		cacheControl = fmt.Sprintf("public, max-age=%d", int(expiresAt.Sub(time.Now()).Seconds()))
 	}
+	w.Header().Add("Cache-Control", cacheControl)
 	contentType := http.DetectContentType(fileData)
 	w.Header().Add("Content-Type", contentType)
 	w.Header().Add("Content-Length", strconv.Itoa(len(fileData)))

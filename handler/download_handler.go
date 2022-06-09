@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 
-	"github.com/sealsurlaw/gouvre/errs"
 	"github.com/sealsurlaw/gouvre/helper"
 	"github.com/sealsurlaw/gouvre/request"
 	"github.com/sealsurlaw/gouvre/response"
@@ -25,10 +24,10 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.hasWhitelistedIpAddress(r) {
-		response.SendError(w, 401, "Not on ip whitelist.", errs.ErrNotAuthorized)
-		return
-	}
+	// if !h.hasWhitelistedIpAddress(r) {
+	// 	response.SendError(w, 401, "Not on ip whitelist.", errs.ErrNotAuthorized)
+	// 	return
+	// }
 
 	// filename
 	filename, err := request.ParseFilenameFromUrl(r)
