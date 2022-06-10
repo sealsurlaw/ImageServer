@@ -16,6 +16,7 @@ type Config struct {
 	EncryptionSecret       string   `json:"encryptionSecret"`
 	ThumbnailQuality       int      `json:"thumbnailQuality"`
 	HashFilename           bool     `json:"hashFilename"`
+	PinToIpfs              bool     `json:"pinToIpfs"`
 	WhitelistedTokens      []string `json:"whitelistedTokens"`
 	WhitelistedIpAddresses []string `json:"whitelistedIpAddresses"`
 }

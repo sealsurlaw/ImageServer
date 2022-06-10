@@ -4,16 +4,25 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"image"
 	"image/jpeg"
 	"io/ioutil"
 	"math"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"os"
 
 	"github.com/disintegration/imaging"
 )
+
+type IpfsResponse struct {
+	Name string `json:"Name"`
+	Hash string `json:"Hash"`
+	Size string `json:"Size"`
+}
 
 func CalculateHash(str string) string {
 	s := sha512.Sum384([]byte(str))
@@ -92,6 +101,58 @@ func OpenFile(fullFilePath string) ([]byte, error) {
 	}
 
 	return fileData, nil
+}
+
+func PinFile(
+	fileData []byte,
+	filename string,
+) (cid string, err error) {
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = part.Write(fileData)
+	if err != nil {
+		return "", err
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest("POST", "http://localhost:5001/api/v0/add?cid-version=1&pin=true", body)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("status code: %d", resp.StatusCode)
+	}
+
+	p, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	j := &IpfsResponse{}
+	err = json.Unmarshal(p, j)
+	if err != nil {
+		return "", err
+	}
+
+	return j.Hash, nil
 }
 
 func cropAndScale(img image.Image, resolution int) *image.NRGBA {

@@ -5,6 +5,7 @@
     "encryptionSecret": "Sea-Crit",
     "thumbnailQuality": 60,
     "hashFilename": false,
+    "pinToIpfs": false,
     "whitelistedTokens": [
         "S0m3S3cr3t70k3n"
     ],

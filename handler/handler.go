@@ -22,6 +22,7 @@ type Handler struct {
 	tokenizer              *token.Tokenizer
 	thumbnailQuality       int
 	hashFilename           bool
+	pinToIpfs              bool
 	whitelistedTokens      []string
 	whitelistedIpAddresses []string
 	singleUseUploadTokens  map[string]bool
@@ -38,6 +39,7 @@ func NewHandler(cfg *config.Config) *Handler {
 		tokenizer:              tokenizer,
 		thumbnailQuality:       cfg.ThumbnailQuality,
 		hashFilename:           cfg.HashFilename,
+		pinToIpfs:              cfg.PinToIpfs,
 		whitelistedTokens:      cfg.WhitelistedTokens,
 		whitelistedIpAddresses: cfg.WhitelistedIpAddresses,
 		singleUseUploadTokens:  make(map[string]bool),

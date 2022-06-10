@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/helper"
 	"github.com/sealsurlaw/gouvre/request"
 	"github.com/sealsurlaw/gouvre/response"
 )
@@ -40,7 +42,7 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// filename
-	filename, err := request.ParseFilename(r)
+	filename, _ := request.ParseFilename(r)
 	if filename == "" {
 		response.SendBadRequest(w, "filename")
 		return
@@ -62,17 +64,27 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.pinToIpfs {
+		cid, err := helper.PinFile(fileData, filename)
+		if err != nil {
+			response.SendError(w, 500, "Could not pin file to IPFS", err)
+			return
+		}
+
+		fmt.Printf("Pinned file %s with cid: %s\n", filename, cid)
+	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *Handler) uploadFileWithLink(w http.ResponseWriter, r *http.Request) {
-	token, err := request.ParseTokenFromUrl(r)
+	token, _ := request.ParseTokenFromUrl(r)
 	if token == "" {
 		response.SendBadRequest(w, "token")
 		return
 	}
 
-	if h.singleUseUploadTokens[token] != true {
+	if !h.singleUseUploadTokens[token] {
 		response.SendInvalidAuthToken(w)
 		return
 	}
