@@ -50,7 +50,7 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			// Bypass thumbnail creation for Gifs
 			if err == errs.ErrGif {
-				thumbnailFilename = filename
+				thumbnailFilename = h.getProperFilename(filename)
 			} else {
 				response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
 				return
