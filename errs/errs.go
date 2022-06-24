@@ -5,23 +5,25 @@ import (
 	"net/http"
 )
 
-var ErrCannotConnectDatabase = fmt.Errorf("Cannot connect to the database.")
+var ErrCannotConnectDatabase = fmt.Errorf("cannot connect to the database")
 
-var ErrBadEncryptionSecret = fmt.Errorf("Bad encryption secret.")
+var ErrBadEncryptionSecret = fmt.Errorf("bad encryption secret")
 
-var ErrTokenAlreadyExists = fmt.Errorf("Token already exists.")
+var ErrTokenAlreadyExists = fmt.Errorf("token already exists")
 
-var ErrInvalidContentType = fmt.Errorf("Invalid content type.")
+var ErrInvalidContentType = fmt.Errorf("invalid content type")
 
-var ErrTooManyAttempts = fmt.Errorf("Too many attempts tried")
+var ErrTooManyAttempts = fmt.Errorf("too many attempts tried")
 
-var ErrTokenNotFound = fmt.Errorf("Token not found.")
+var ErrTokenNotFound = fmt.Errorf("token not found")
 
-var ErrNotAuthorized = fmt.Errorf("Not authorized.")
+var ErrNotAuthorized = fmt.Errorf("not authorized")
 
-var ErrTokenExpired = fmt.Errorf("Token expired.")
+var ErrTokenExpired = fmt.Errorf("token expired")
 
-var ErrBadRequest = fmt.Errorf("Bad request.")
+var ErrBadRequest = fmt.Errorf("bad request")
+
+var ErrGif = fmt.Errorf("image is a gif")
 
 type ErrorResponse struct {
 	Code   int    `json:"code"`

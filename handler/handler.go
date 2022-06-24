@@ -143,6 +143,11 @@ func (h *Handler) createThumbnail(tp *ThumbnailParameters) error {
 		return errs.ErrBadEncryptionSecret
 	}
 
+	contentType := http.DetectContentType(fileData)
+	if contentType == "image/gif" {
+		return errs.ErrGif
+	}
+
 	// create thumbnail
 	thumbData, err := helper.CreateThumbnail(
 		fileData,

@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
+	"github.com/sealsurlaw/gouvre/errs"
 	"github.com/sealsurlaw/gouvre/helper"
 	"github.com/sealsurlaw/gouvre/request"
 	"github.com/sealsurlaw/gouvre/response"
@@ -41,27 +43,47 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 	resolution := request.ParseResolutionFromQuery(r)
 	encryptionSecret := request.ParseEncryptionSecretFromQuery(r)
 
+	var properFilename string
 	if resolution != nil {
 		thumbnailParameters := &ThumbnailParameters{filename, *resolution, square, encryptionSecret}
 		thumbnailFilename, err := h.checkOrCreateThumbnailFile(thumbnailParameters)
 		if err != nil {
-			response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
-			return
+			// Bypass thumbnail creation for Gifs
+			if err == errs.ErrGif {
+				thumbnailFilename = filename
+			} else {
+				response.SendError(w, 500, "Couldn't check/create thumbnail file.", err)
+				return
+			}
 		}
-		filename = thumbnailFilename
+		properFilename = thumbnailFilename
 	} else {
-		filename = h.getProperFilename(filename)
+		properFilename = h.getProperFilename(filename)
 	}
 
 	// open file
-	fullFilePath := h.makeFullFilePath(filename)
+	fullFilePath := h.makeFullFilePath(properFilename)
 	fileData, err := helper.OpenFile(fullFilePath)
 	if err != nil {
 		response.SendCouldntFindImage(w, err)
 		return
 	}
-
 	_ = h.tryDecryptFile(&fileData, encryptionSecret)
+
+	// For gif thumbnails, abort and give full version
+	// Gif thumbnails currently do not support animations
+	contentType := http.DetectContentType(fileData)
+	fmt.Println(contentType)
+	if contentType == "image/gif" && resolution != nil {
+		properFilename = h.getProperFilename(filename)
+		fullFilePath = h.makeFullFilePath(properFilename)
+		fileData, err = helper.OpenFile(fullFilePath)
+		if err != nil {
+			response.SendCouldntFindImage(w, err)
+			return
+		}
+		_ = h.tryDecryptFile(&fileData, encryptionSecret)
+	}
 
 	response.SendImage(w, fileData, nil)
 }
