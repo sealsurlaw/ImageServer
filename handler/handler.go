@@ -368,6 +368,28 @@ func (h *Handler) writeFile(fileData []byte, filename string, encryptionSecret s
 		return err
 	}
 
+	fullFilePath := h.makeFullFilePath(filename)
+
+	if h.tryEncryptFile(&fileData, encryptionSecret) != nil {
+		return err
+	}
+
+	// write file
+	err = os.WriteFile(fullFilePath, fileData, 0600)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *Handler) writeImage(fileData []byte, filename string, encryptionSecret string) error {
+	filename = h.getProperFilename(filename)
+	err := h.createDirectories(filename)
+	if err != nil {
+		return err
+	}
+
 	contentType := http.DetectContentType(fileData)
 	if !helper.IsSupportedContentType(contentType) {
 		msg := fmt.Sprintf("Content type %s not supported.", contentType)

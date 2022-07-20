@@ -10,9 +10,9 @@ import (
 	"github.com/sealsurlaw/gouvre/response"
 )
 
-func (h *Handler) DownloadFile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DownloadImage(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		h.downloadFile(w, r)
+		h.downloadImage(w, r)
 		return
 	} else {
 		response.SendMethodNotFound(w)
@@ -20,7 +20,7 @@ func (h *Handler) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) downloadImage(w http.ResponseWriter, r *http.Request) {
 	// if !h.hasWhitelistedToken(r) {
 	// 	response.SendInvalidAuthToken(w)
 	// 	return
@@ -85,5 +85,5 @@ func (h *Handler) downloadFile(w http.ResponseWriter, r *http.Request) {
 		_ = h.tryDecryptFile(&fileData, encryptionSecret)
 	}
 
-	response.SendImage(w, fileData, nil)
+	response.SendFile(w, fileData, nil)
 }

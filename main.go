@@ -16,21 +16,23 @@ func main() {
 	h := handler.NewHandler(cfg)
 
 	handle("/ping", h.Ping)
-	handle("/links/thumbnails/batch", h.CreateBatchThumbnailLinks)
-	handle("/links/thumbnails", h.CreateThumbnailLink)
-	handle("/links/upload", h.CreateUploadLink)
-	handle("/uploads/", h.UploadFileWithLink)
-	handle("/uploads", h.UploadFile)
-	handle("/images/", h.DownloadFile)
-	handle("/links/", h.GetImageFromTokenLink)
-	handle("/links", h.CreateLink)
+	handle("/files/upload", h.UploadFile)
+	handle("/images/links/thumbnails/batch", h.CreateBatchImageThumbnailLinks)
+	handle("/images/links/thumbnails", h.CreateImageThumbnailLink)
+	handle("/images/links/upload", h.CreateImageUploadLink)
+	handle("/images/links/", h.GetImageFromTokenLink)
+	handle("/images/links", h.CreateImageLink)
+	handle("/images/uploads/", h.UploadImageWithLink)
+	handle("/images/uploads", h.UploadImage)
+	handle("/images/", h.DownloadImage)
+	handle("/ipfs/", h.GetIpfsFile)
+	handle("/meta", h.DownloadImage)
 
 	handle("/", func(w http.ResponseWriter, r *http.Request) {
 		response.SendMethodNotFound(w)
-		return
 	})
 
-	fmt.Printf(fmt.Sprintf("Starting server at port %s\n", cfg.Port))
+	fmt.Printf("Starting server at port %s\n", cfg.Port)
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", cfg.Port), nil); err != nil {
 		log.Fatal(err)
 	}

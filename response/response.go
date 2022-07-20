@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sealsurlaw/gouvre/errs"
+	"github.com/sealsurlaw/gouvre/helper"
 )
+
+type UploadImageResponse struct {
+	Cid string `json:"cid"`
+}
 
 type GetLinkResponse struct {
 	ExpiresAt *time.Time `json:"expiresAt"`
@@ -28,7 +34,7 @@ type GetThumbnailLinksResponse struct {
 func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 	j, err := json.Marshal(obj)
 	if err != nil {
-		fmt.Printf(err.Error())
+		fmt.Print(err.Error())
 	}
 
 	w.Header().Add("Content-Type", "application/json")
@@ -36,13 +42,16 @@ func SendJson(w http.ResponseWriter, obj interface{}, statusCode int) {
 	w.Write(j)
 }
 
-func SendImage(w http.ResponseWriter, fileData []byte, expiresAt *time.Time) {
+func SendFile(w http.ResponseWriter, fileData []byte, expiresAt *time.Time) {
 	cacheControl := "public, max-age=86400"
 	if expiresAt != nil {
-		cacheControl = fmt.Sprintf("public, max-age=%d", int(expiresAt.Sub(time.Now()).Seconds()))
+		cacheControl = fmt.Sprintf("public, max-age=%d", int(time.Until(*expiresAt).Seconds()))
 	}
 	w.Header().Add("Cache-Control", cacheControl)
 	contentType := http.DetectContentType(fileData)
+	if strings.Contains(contentType, "text/plain") && helper.IsJson(string(fileData)) {
+		contentType = "application/json"
+	}
 	w.Header().Add("Content-Type", contentType)
 	w.Header().Add("Content-Length", strconv.Itoa(len(fileData)))
 	w.Write(fileData)

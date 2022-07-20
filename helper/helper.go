@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/disintegration/imaging"
 )
@@ -155,6 +156,64 @@ func PinFile(
 	return j.Hash, nil
 }
 
+func IsIpfsFilePinned(
+	cid string,
+) error {
+	url := "http://localhost:5001/api/v0/pin/ls"
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("status code: %d", resp.StatusCode)
+	}
+
+	resBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if !strings.Contains(string(resBody), cid) {
+		return fmt.Errorf("ipfs link not pinned locally")
+	}
+
+	return nil
+}
+
+func GetIpfsFile(
+	cid string,
+) (fileData []byte, err error) {
+	url := fmt.Sprintf("http://localhost:5001/api/v0/cat?arg=%s", cid)
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("status code: %d", resp.StatusCode)
+	}
+
+	fileData, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
+}
+
 func cropAndScale(img image.Image, resolution int) *image.NRGBA {
 	return imaging.Fill(img, resolution, resolution, imaging.Center, imaging.Lanczos)
 }
@@ -171,4 +230,9 @@ func scale(img image.Image, resolution int) *image.NRGBA {
 	}
 
 	return imaging.Resize(img, newWidth, 0, imaging.Lanczos)
+}
+
+func IsJson(s string) bool {
+	var js interface{}
+	return json.Unmarshal([]byte(s), &js) == nil
 }

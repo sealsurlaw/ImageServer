@@ -9,7 +9,7 @@ import (
 	"github.com/sealsurlaw/gouvre/response"
 )
 
-func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateImageLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		h.createLink(w, r)
 		return
@@ -19,7 +19,7 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) CreateUploadLink(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateImageUploadLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		h.createUploadLink(w, r)
 		return
@@ -160,5 +160,5 @@ func (h *Handler) getImageFromTokenLink(w http.ResponseWriter, r *http.Request) 
 	_ = h.tryDecryptFile(&fileData, secret)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	response.SendImage(w, fileData, expiresAt)
+	response.SendFile(w, fileData, expiresAt)
 }

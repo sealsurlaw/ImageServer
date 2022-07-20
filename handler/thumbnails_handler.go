@@ -15,7 +15,7 @@ type ThumbnailParameters struct {
 	EncryptionSecret string
 }
 
-func (h *Handler) CreateThumbnailLink(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateImageThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		h.createThumbnailLink(w, r)
 		return
@@ -25,7 +25,7 @@ func (h *Handler) CreateThumbnailLink(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) CreateBatchThumbnailLinks(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateBatchImageThumbnailLinks(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		h.createBatchThumbnailLinks(w, r)
 		return
