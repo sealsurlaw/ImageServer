@@ -25,8 +25,8 @@ func main() {
 	handle("/images/uploads/", h.UploadImageWithLink)
 	handle("/images/uploads", h.UploadImage)
 	handle("/images/", h.DownloadImage)
+	handle("/ipfs/json", h.AddJsonToIpfs)
 	handle("/ipfs/", h.GetIpfsFile)
-	handle("/meta", h.DownloadImage)
 
 	handle("/", func(w http.ResponseWriter, r *http.Request) {
 		response.SendMethodNotFound(w)
