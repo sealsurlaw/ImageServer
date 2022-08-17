@@ -331,11 +331,11 @@ func (h *Handler) makeFullFilePath(filename string) string {
 }
 
 func (h *Handler) makeTokenUrl(token string) string {
-	return fmt.Sprintf("%s/links/%s", h.BaseUrl, token)
+	return fmt.Sprintf("%s/images/links/%s", h.BaseUrl, token)
 }
 
 func (h *Handler) makeUploadTokenUrl(token string) string {
-	return fmt.Sprintf("%s/uploads/%s", h.BaseUrl, token)
+	return fmt.Sprintf("%s/images/uploads/%s", h.BaseUrl, token)
 }
 
 func (h *Handler) updateDepsFile(fullFilePath, thumbnailfullFilePath string) error {
