@@ -214,6 +214,37 @@ func GetIpfsFile(
 	return fileData, nil
 }
 
+func AutoRotateImage(fileData []byte) ([]byte, error) {
+	// Only jpegs have exif data
+	contentType := http.DetectContentType(fileData)
+	if contentType != "image/jpeg" {
+		return fileData, nil
+	}
+
+	// Physically rotate images with rotation exif data
+	r := bytes.NewReader(fileData)
+	img, err := imaging.Decode(r, imaging.AutoOrientation(true))
+	if err != nil {
+		return nil, err
+	}
+
+	// Turn everything back into a jpeg
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, img, &jpeg.Options{
+		Quality: 100,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fileData, err = ioutil.ReadAll(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
+}
+
 func cropAndScale(img image.Image, resolution int) *image.NRGBA {
 	return imaging.Fill(img, resolution, resolution, imaging.Center, imaging.Lanczos)
 }

@@ -128,6 +128,12 @@ func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fileData, err = helper.AutoRotateImage(fileData)
+	if err != nil {
+		response.SendError(w, 500, "Could not auto-rotate image", err)
+		return
+	}
+
 	var cid = ""
 	if h.pinToIpfs {
 		cid, err = helper.PinFile(fileData, filename)
