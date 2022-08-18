@@ -2,7 +2,10 @@ package handler
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"image/jpeg"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -10,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/disintegration/imaging"
 	"github.com/sealsurlaw/gouvre/config"
 	"github.com/sealsurlaw/gouvre/errs"
 	"github.com/sealsurlaw/gouvre/helper"
@@ -404,15 +408,50 @@ func (h *Handler) writeImage(fileData []byte, filename string, encryptionSecret 
 		return err
 	}
 
+	fileData, err = autoRotateImage(fileData)
+	if err != nil {
+		return err
+	}
+
 	if h.tryEncryptFile(&fileData, encryptionSecret) != nil {
 		return err
 	}
 
-	// write file
 	err = os.WriteFile(fullFilePath, fileData, 0600)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func autoRotateImage(fileData []byte) ([]byte, error) {
+	// Only jpegs have exif data
+	contentType := http.DetectContentType(fileData)
+	if contentType != "image/jpeg" {
+		return fileData, nil
+	}
+
+	// Physically rotate images with rotation exif data
+	r := bytes.NewReader(fileData)
+	img, err := imaging.Decode(r, imaging.AutoOrientation(true))
+	if err != nil {
+		return nil, err
+	}
+
+	// Turn everything back into a jpeg
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, img, &jpeg.Options{
+		Quality: 100,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fileData, err = ioutil.ReadAll(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return fileData, nil
 }
