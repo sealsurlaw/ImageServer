@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/uuid"
+	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multicodec"
+	"github.com/multiformats/go-multihash"
 	"github.com/sealsurlaw/gouvre/errs"
 	"github.com/sealsurlaw/gouvre/helper"
 	"github.com/sealsurlaw/gouvre/request"
@@ -51,13 +55,6 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// filename
-	filename, _ := request.ParseFilename(r)
-	if filename == "" && !h.pinToIpfs {
-		response.SendBadRequest(w, "filename")
-		return
-	}
-
 	// encryption-secret - optional
 	encryptionSecret := request.ParseEncryptionSecret(r)
 
@@ -68,18 +65,41 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cid = ""
+	var cidStr = ""
+	pref := cid.Prefix{
+		Version:  1,
+		Codec:    uint64(multicodec.Raw),
+		MhType:   multihash.SHA2_256,
+		MhLength: -1, // default length
+	}
+	cidData, err := pref.Sum(fileData)
+	if err != nil {
+		response.SendError(w, 500, "Could not create cid", err)
+		return
+	}
+	cidStr = cidData.String()
+
+	// filename
+	filename, _ := request.ParseFilename(r)
+	if filename == "" && !h.pinToIpfs {
+		if cidData.ByteLen() == 0 {
+			filename = uuid.NewString()
+		} else {
+			filename = cidStr
+		}
+	}
+
 	if h.pinToIpfs {
-		cid, err = helper.PinFile(fileData, filename)
+		cidStr, err = helper.PinFile(fileData, filename)
 		if err != nil {
 			response.SendError(w, 500, "Could not pin file to IPFS", err)
 			return
 		}
 
-		fmt.Printf("Pinned file %s with cid: %s\n", filename, cid)
+		fmt.Printf("Pinned file %s with cid: %s\n", filename, cidStr)
 
 		if filename == "" {
-			filename = cid
+			filename = cidStr
 		}
 	}
 
@@ -89,15 +109,10 @@ func (h *Handler) uploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.pinToIpfs {
-		res := &response.UploadImageResponse{
-			Cid: cid,
-		}
-		response.SendJson(w, res, http.StatusCreated)
-		return
+	res := &response.UploadImageResponse{
+		Cid: cidStr,
 	}
-
-	w.WriteHeader(http.StatusCreated)
+	response.SendJson(w, res, http.StatusCreated)
 }
 
 func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) {
@@ -108,13 +123,6 @@ func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) {
 
 	if !h.hasWhitelistedIpAddress(r) {
 		response.SendError(w, 401, "Not on ip whitelist.", errs.ErrNotAuthorized)
-		return
-	}
-
-	// filename
-	filename, _ := request.ParseFilename(r)
-	if filename == "" && !h.pinToIpfs {
-		response.SendBadRequest(w, "filename")
 		return
 	}
 
@@ -134,18 +142,41 @@ func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cid = ""
+	var cidStr = ""
+	pref := cid.Prefix{
+		Version:  1,
+		Codec:    uint64(multicodec.Raw),
+		MhType:   multihash.SHA2_256,
+		MhLength: -1, // default length
+	}
+	cidData, err := pref.Sum(fileData)
+	if err != nil {
+		response.SendError(w, 500, "Could not create cid", err)
+		return
+	}
+	cidStr = cidData.String()
+
+	// filename
+	filename, _ := request.ParseFilename(r)
+	if filename == "" && !h.pinToIpfs {
+		if cidData.ByteLen() == 0 {
+			filename = uuid.NewString()
+		} else {
+			filename = cidStr
+		}
+	}
+
 	if h.pinToIpfs {
-		cid, err = helper.PinFile(fileData, filename)
+		cidStr, err = helper.PinFile(fileData, filename)
 		if err != nil {
 			response.SendError(w, 500, "Could not pin file to IPFS", err)
 			return
 		}
 
-		fmt.Printf("Pinned file %s with cid: %s\n", filename, cid)
+		fmt.Printf("Pinned file %s with cid: %s\n", filename, cidStr)
 
 		if filename == "" {
-			filename = cid
+			filename = cidStr
 		}
 	}
 
@@ -155,15 +186,10 @@ func (h *Handler) uploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.pinToIpfs {
-		res := &response.UploadImageResponse{
-			Cid: cid,
-		}
-		response.SendJson(w, res, http.StatusCreated)
-		return
+	res := &response.UploadImageResponse{
+		Cid: cidStr,
 	}
-
-	w.WriteHeader(http.StatusCreated)
+	response.SendJson(w, res, http.StatusCreated)
 }
 
 func (h *Handler) uploadImageWithLink(w http.ResponseWriter, r *http.Request) {
